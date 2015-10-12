@@ -40,6 +40,8 @@ import simpletransform
 import cubicsuperpath
 import bezmisc
 
+from simpletransform import fuseTransform
+
 inkex.localize()
 locale.setlocale(locale.LC_ALL, '')
 
@@ -93,38 +95,6 @@ def csplength(csp):
             lengths[-1].append(l)
             total += l
     return lengths, total
-def csparea(csp):
-    area = 0.0
-    for sp in csp:
-        if len(sp) < 2: continue
-        for i in range(len(sp)):            # calculate polygon area
-            area += 0.5*sp[i-1][1][0]*(sp[i][1][1] - sp[i-2][1][1])
-        for i in range(1, len(sp)):         # add contribution from cubic Bezier
-            vec_x = numpy.matrix([sp[i-1][1][0], sp[i-1][2][0], sp[i][0][0], sp[i][1][0]])
-            vec_y = numpy.matrix([sp[i-1][1][1], sp[i-1][2][1], sp[i][0][1], sp[i][1][1]])
-            area += 0.15*(vec_x*mat_area*vec_y.T)[0,0]
-    return -area                            # require positive area for CCW
-def cspcofm(csp):
-    area = csparea(csp)
-    xc = 0.0
-    yc = 0.0
-    if abs(area) < 1.e-8:
-        inkex.errormsg(_("Area is zero, cannot calculate Center of Mass"))
-        return 0, 0
-    for sp in csp:
-        for i in range(len(sp)):            # calculate polygon moment
-            xc += sp[i-1][1][1]*(sp[i-2][1][0] - sp[i][1][0])*(sp[i-2][1][0] + sp[i-1][1][0] + sp[i][1][0])/6
-            yc += sp[i-1][1][0]*(sp[i][1][1] - sp[i-2][1][1])*(sp[i-2][1][1] + sp[i-1][1][1] + sp[i][1][1])/6
-        for i in range(1, len(sp)):         # add contribution from cubic Bezier
-            vec_x = numpy.matrix([sp[i-1][1][0], sp[i-1][2][0], sp[i][0][0], sp[i][1][0]])
-            vec_y = numpy.matrix([sp[i-1][1][1], sp[i-1][2][1], sp[i][0][1], sp[i][1][1]])
-            vec_t = numpy.matrix([(vec_x*mat_cofm_0*vec_y.T)[0,0], (vec_x*mat_cofm_1*vec_y.T)[0,0], (vec_x*mat_cofm_2*vec_y.T)[0,0], (vec_x*mat_cofm_3*vec_y.T)[0,0]])
-            xc += (vec_x*vec_t.T)[0,0]/280
-            yc += (vec_y*vec_t.T)[0,0]/280
-    return -xc/area, -yc/area
-def appendSuperScript(node, text):
-    super = inkex.etree.SubElement(node, inkex.addNS('tspan', 'svg'), {'style': 'font-size:65%;baseline-shift:super'})
-    super.text = text
     
 class Length(inkex.Effect):
     def __init__(self):
@@ -132,23 +102,7 @@ class Length(inkex.Effect):
         self.OptionParser.add_option("--type",
                         action="store", type="string", 
                         dest="type", default="length",
-                        help="Type of measurement")
-        self.OptionParser.add_option("--format",
-                        action="store", type="string", 
-                        dest="format", default="textonpath",
-                        help="Text Orientation")
-        self.OptionParser.add_option("--angle",
-                        action="store", type="float", 
-                        dest="angle", default=0,
-                        help="Angle")             
-        self.OptionParser.add_option("-f", "--fontsize",
-                        action="store", type="int", 
-                        dest="fontsize", default=20,
-                        help="Size of length lable text in px")
-        self.OptionParser.add_option("-o", "--offset",
-                        action="store", type="float", 
-                        dest="offset", default=-6,
-                        help="The distance above the curve")
+                        help="Type of measurement")            
         self.OptionParser.add_option("-u", "--unit",
                         action="store", type="string", 
                         dest="unit", default="mm",
@@ -161,10 +115,6 @@ class Length(inkex.Effect):
                         action="store", type="float", 
                         dest="scale", default=1,
                         help="Scale Factor (Drawing:Real Length)")
-        self.OptionParser.add_option("-r", "--orient",
-                        action="store", type="inkbool", 
-                        dest="orient", default=True,
-                        help="Keep orientation of text upright")
         self.OptionParser.add_option("--tab",
                         action="store", type="string", 
                         dest="tab", default="sampling",
@@ -178,7 +128,6 @@ class Length(inkex.Effect):
         # get number of digits
         prec = int(self.options.precision)
         scale = self.unittouu('1px')    # convert to document units
-        self.options.offset *= scale
         factor = 1.0
         doc = self.document.getroot()
         if doc.get('viewBox'):
@@ -187,8 +136,10 @@ class Length(inkex.Effect):
             if self.unittouu(doc.get('height'))/float(viewh) < factor:
                 factor = self.unittouu(doc.get('height'))/float(viewh)
             factor /= self.unittouu('1px')
-            self.options.fontsize /= factor
         # loop over all selected paths
+        obj_lengths = []
+        obj_ids = []
+        obj_nodes = []
         for id, node in self.selected.iteritems():
             if node.tag == inkex.addNS('path','svg'):
                 mat = simpletransform.composeParents(node, [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]])
@@ -197,71 +148,27 @@ class Length(inkex.Effect):
                 factor *= scale/self.unittouu('1'+self.options.unit)
                 if self.options.type == "length":
                     slengths, stotal = csplength(p)
-                    self.group = inkex.etree.SubElement(node.getparent(),inkex.addNS('text','svg'))
-                elif self.options.type == "area":
-                    stotal = csparea(p)*factor*self.options.scale
-                    self.group = inkex.etree.SubElement(node.getparent(),inkex.addNS('text','svg'))
-                else:
-                    xc, yc = cspcofm(p)
-                    self.group = inkex.etree.SubElement(node.getparent(),inkex.addNS('path','svg'))
-                    self.group.set('id', 'MassCenter_' + node.get('id'))
-                    self.addCross(self.group, xc, yc, scale)
-                    continue
+                    # self.group = inkex.etree.SubElement(node.getparent(),inkex.addNS('text','svg'))
+                    obj_lengths += [stotal]
+                    obj_ids += [id]
+                    obj_nodes += [node]
                 # Format the length as string
-                lenstr = locale.format("%(len)25."+str(prec)+"f",{'len':round(stotal*factor*self.options.scale,prec)}).strip()
-                if self.options.format == 'textonpath':
-                    if self.options.type == "length":
-                        self.addTextOnPath(self.group, 0, 0, lenstr+' '+self.options.unit, id, 'start', '50%', self.options.offset)
-                    else:
-                        self.addTextOnPath(self.group, 0, 0, lenstr+' '+self.options.unit+'^2', id, 'start', '0%', self.options.offset)
-                else:
-                    if self.options.type == "length":
-                        self.addTextWithTspan(self.group, p[0][0][1][0], p[0][0][1][1], lenstr+' '+self.options.unit, id, 'start', -int(self.options.angle), self.options.offset + self.options.fontsize/2)
-                    else:
-                        self.addTextWithTspan(self.group, p[0][0][1][0], p[0][0][1][1], lenstr+' '+self.options.unit+'^2', id, 'start', -int(self.options.angle), -self.options.offset + self.options.fontsize/2)
+                # lenstr = locale.format("%(len)25."+str(prec)+"f",{'len':round(stotal*factor*self.options.scale,prec)}).strip()
+        
+        
+        ratio = obj_lengths[0] / obj_lengths[1]
+        #obj_nodes[1].get()
+        obj_nodes[1].set('transform', 'scale(' + str(ratio) + ' ' + str(ratio) +')')
+        
+        fuseTransform(obj_nodes[1])
+        
 
-    def addCross(self, node, x, y, scale):
-        l = 3*scale         # 3 pixels in document units
-        node.set('d', 'm %s,%s %s,0 %s,0 m %s,%s 0,%s 0,%s' % (str(x-l), str(y), str(l), str(l), str(-l), str(-l), str(l), str(l)))
-        node.set('style', 'stroke:#000000;fill:none;stroke-width:%s' % str(0.5*scale))
+    # def addCross(self, node, x, y, scale):
+        # l = 3*scale         # 3 pixels in document units
+        # node.set('d', 'm %s,%s %s,0 %s,0 m %s,%s 0,%s 0,%s' % (str(x-l), str(y), str(l), str(l), str(-l), str(-l), str(l), str(l)))
+        # node.set('style', 'stroke:#000000;fill:none;stroke-width:%s' % str(0.5*scale))
 
-    def addTextOnPath(self, node, x, y, text, id, anchor, startOffset, dy = 0):
-                new = inkex.etree.SubElement(node,inkex.addNS('textPath','svg'))
-                s = {'text-align': 'center', 'vertical-align': 'bottom',
-                    'text-anchor': anchor, 'font-size': str(self.options.fontsize),
-                    'fill-opacity': '1.0', 'stroke': 'none',
-                    'font-weight': 'normal', 'font-style': 'normal', 'fill': '#000000'}
-                new.set('style', simplestyle.formatStyle(s))
-                new.set(inkex.addNS('href','xlink'), '#'+id)
-                new.set('startOffset', startOffset)
-                new.set('dy', str(dy)) # dubious merit
-                #new.append(tp)
-                if text[-2:] == "^2":
-                    appendSuperScript(new, "2")
-                    new.text = str(text)[:-2]
-                else:
-                    new.text = str(text)
-                #node.set('transform','rotate(180,'+str(-x)+','+str(-y)+')')
-                node.set('x', str(x))
-                node.set('y', str(y))
-
-    def addTextWithTspan(self, node, x, y, text, id, anchor, angle, dy = 0):
-                new = inkex.etree.SubElement(node,inkex.addNS('tspan','svg'), {inkex.addNS('role','sodipodi'): 'line'})
-                s = {'text-align': 'center', 'vertical-align': 'bottom',
-                    'text-anchor': anchor, 'font-size': str(self.options.fontsize),
-                    'fill-opacity': '1.0', 'stroke': 'none',
-                    'font-weight': 'normal', 'font-style': 'normal', 'fill': '#000000'}
-                new.set('style', simplestyle.formatStyle(s))
-                new.set('dy', str(dy))
-                if text[-2:] == "^2":
-                    appendSuperScript(new, "2")
-                    new.text = str(text)[:-2]
-                else:
-                    new.text = str(text)
-                node.set('x', str(x))
-                node.set('y', str(y))
-                node.set('transform', 'rotate(%s, %s, %s)' % (angle, x, y))
-
+    
 if __name__ == '__main__':
     e = Length()
     e.affect()

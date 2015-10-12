@@ -11,13 +11,6 @@
 				<_item msgctxt="measure extension" value="area">Area</_item>
 				<_item msgctxt="measure extension" value="cofm">Center of Mass</_item>
 			</param>
-			<param name="format" type="enum" _gui-text="Text Orientation: ">
-				<_item msgctxt="measure extension" value="textonpath">Text On Path</_item>
-				<_item msgctxt="measure extension" value="angle">Fixed Angle</_item>
-			</param>
-			<param name="angle" type="float" min="-360" max="360" _gui-text="Angle [with Fixed Angle option only] (°):">0</param>
-			<param name="fontsize" type="int" min="1" max="1000" _gui-text="Font size (px):">12</param>
-			<param name="offset" type="float" min="-10000" max="10000" _gui-text="Offset (px):">-6</param>
 			<param name="precision" type="int" min="0" max="25" _gui-text="Precision:">2</param>
 			<param name="scale" type="float" min="1e-8" max="1e10" _gui-text="Scale Factor (Drawing:Real Length) = 1:">1</param>
 			<param name="unit" type="enum" _gui-text="Length Unit:">
