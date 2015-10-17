@@ -24,6 +24,10 @@
 				<item value="m">m</item>
 				<item value="km">km</item>
 			</param>
+			<param name="radio" type="optiongroup" _gui-text="Scaling Type: ">
+				<option value="string">Big to Small</option>
+				<option value="string">Small to Big</option>
+			</param>
 		</page>
 		<page name="desc" _gui-text="Help">
 			<_param name="measurehelp" type="description" xml:space="preserve">This effect measures the length, area, or center-of-mass of the selected paths. Length and area are added as a text object with the selected units. Center-of-mass is shown as a cross symbol.

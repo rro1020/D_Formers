@@ -40,7 +40,7 @@ import simpletransform
 import cubicsuperpath
 import bezmisc
 
-from simpletransform import fuseTransform
+from simpletransform import fuseTransform, fuseScale
 
 inkex.localize()
 locale.setlocale(locale.LC_ALL, '')
@@ -102,7 +102,7 @@ class Length(inkex.Effect):
         self.OptionParser.add_option("--type",
                         action="store", type="string", 
                         dest="type", default="length",
-                        help="Type of measurement")            
+                        help="Type of measurement") 
         self.OptionParser.add_option("-u", "--unit",
                         action="store", type="string", 
                         dest="unit", default="mm",
@@ -115,6 +115,12 @@ class Length(inkex.Effect):
                         action="store", type="float", 
                         dest="scale", default=1,
                         help="Scale Factor (Drawing:Real Length)")
+
+        self.OptionParser.add_option("-r", "--radio",
+                        action="store", type="string", 
+                        dest="radioOption",
+                        help="Radio Button")
+                        
         self.OptionParser.add_option("--tab",
                         action="store", type="string", 
                         dest="tab", default="sampling",
@@ -166,7 +172,7 @@ class Length(inkex.Effect):
         obj_nodes[id_max].set('transform', 'scale(' + str(ratio) + ' ' + str(ratio) +')')
         
         fuseTransform(obj_nodes[id_max])
-        
+        #fuseScale(obj_nodes[id_max])
 
     # def addCross(self, node, x, y, scale):
         # l = 3*scale         # 3 pixels in document units
@@ -180,3 +186,6 @@ if __name__ == '__main__':
 
 
 # vim: expandtab shiftwidth=4 tabstop=8 softtabstop=4 fileencoding=utf-8 textwidth=99
+
+
+# Site for Extension GUI: http://wiki.inkscape.org/wiki/index.php/Extensions
