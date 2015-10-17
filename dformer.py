@@ -13,7 +13,7 @@ Copyright (C) 2005 Aaron Spike, aaron@ekips.org
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation; either version 2 of the License, or
-(at your option) any later version.
+(at your option) any later version. 
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -137,7 +137,7 @@ class Length(inkex.Effect):
                 factor = self.unittouu(doc.get('height'))/float(viewh)
             factor /= self.unittouu('1px')
         # loop over all selected paths
-        obj_lengths = []
+        obj_lengths = []  
         obj_ids = []
         obj_nodes = []
         for id, node in self.selected.iteritems():
@@ -151,16 +151,21 @@ class Length(inkex.Effect):
                     # self.group = inkex.etree.SubElement(node.getparent(),inkex.addNS('text','svg'))
                     obj_lengths += [stotal]
                     obj_ids += [id]
-                    obj_nodes += [node]
+                    obj_nodes += [node] 
                 # Format the length as string
                 # lenstr = locale.format("%(len)25."+str(prec)+"f",{'len':round(stotal*factor*self.options.scale,prec)}).strip()
         
-        
-        ratio = obj_lengths[0] / obj_lengths[1]
+        id_min = 0
+        id_max = 1
+        if obj_lengths[id_min] > obj_lengths[id_max]:
+            id_min = 1
+            id_max = 0
+
+        ratio = obj_lengths[id_min] / obj_lengths[id_max]
         #obj_nodes[1].get()
-        obj_nodes[1].set('transform', 'scale(' + str(ratio) + ' ' + str(ratio) +')')
+        obj_nodes[id_max].set('transform', 'scale(' + str(ratio) + ' ' + str(ratio) +')')
         
-        fuseTransform(obj_nodes[1])
+        fuseTransform(obj_nodes[id_max])
         
 
     # def addCross(self, node, x, y, scale):
