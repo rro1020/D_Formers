@@ -40,7 +40,7 @@ import simpletransform
 import cubicsuperpath
 import bezmisc
 
-from simpletransform import fuseTransform, fuseScale
+from simpletransform import fuseTransform
 
 inkex.localize()
 locale.setlocale(locale.LC_ALL, '')
@@ -116,18 +116,18 @@ class Length(inkex.Effect):
                         dest="scale", default=1,
                         help="Scale Factor (Drawing:Real Length)")
 
-        self.OptionParser.add_option("-r", "--radio",
+        self.OptionParser.add_option("-r", "--radioScale",
                         action="store", type="string", 
-                        dest="radioOption",
-                        help="Radio Button")
+                        dest="radioScale", default="B2S",
+                        help="Radio Button Scaling")
                         
         self.OptionParser.add_option("--tab",
                         action="store", type="string", 
                         dest="tab", default="sampling",
                         help="The selected UI-tab when OK was pressed") 
-        self.OptionParser.add_option("--measurehelp",
+        self.OptionParser.add_option("--dformhelp",
                         action="store", type="string", 
-                        dest="measurehelp", default="",
+                        dest="dformhelp", default="",
                         help="dummy")
 
     def effect(self):
@@ -166,13 +166,43 @@ class Length(inkex.Effect):
         if obj_lengths[id_min] > obj_lengths[id_max]:
             id_min = 1
             id_max = 0
-
-        ratio = obj_lengths[id_min] / obj_lengths[id_max]
-        #obj_nodes[1].get()
-        obj_nodes[id_max].set('transform', 'scale(' + str(ratio) + ' ' + str(ratio) +')')
         
-        fuseTransform(obj_nodes[id_max])
+        # if (id_min < 2): 
+            # x = "1" 
+            # layer = inkex.etree.SubElement(doc, 'g')
+            # text = inkex.etree.Element(inkex.addNS('text', 'svg'))
+            # text.text = x 
+            # layer.append(text)
+        
+        if self.options.radioScale == "S2B":
+            ratio = obj_lengths[id_min] / obj_lengths[id_max]
+            #obj_ori = parsePath(obj_nodes[id_max])[0]
+            #ori_trans = (obj_ori.x - (ratio * obj_nodes[id_max].x), obj_ori.y - (ratio * obj_nodes[id_max].x))
+            obj_nodes[id_max].set('transform', 'scale(' + str(ratio) + ' ' + str(ratio) +')')
+            fuseTransform(obj_nodes[id_max])
+            #obj_nodes[id_max].set('transform', 'translate(' + str(ori_trans(0)) + ' ' + ori_trans(1) +')')
+            #fuseTransform(obj_nodes[id_max])
+        elif self.options.radioScale == "B2S":
+            ratio = obj_lengths[id_max] / obj_lengths[id_min]
+            #obj_nodes[1].get()
+            obj_nodes[id_min].set('transform', 'scale(' + str(ratio) + ' ' + str(ratio) +')')
+            fuseTransform(obj_nodes[id_min])
+        
+        
+        # ratio = obj_lengths[id_min] / obj_lengths[id_max]
+        # #obj_nodes[1].get()
+        # obj_nodes[id_max].set('transform', 'scale(' + str(ratio) + ' ' + str(ratio) +')')
+        
+        # fuseTransform(obj_nodes[id_max])
         #fuseScale(obj_nodes[id_max])
+        
+        #len = obj_nodes[id_max].getTotalLength(); 
+        
+        #for x in range (0, 2): 
+            
+        pointList = [] 
+        #q = inkex.getElementById(doc, obj_nodes[id_min]); 
+        
 
     # def addCross(self, node, x, y, scale):
         # l = 3*scale         # 3 pixels in document units

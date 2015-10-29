@@ -6,6 +6,10 @@
 	<dependency type="executable" location="extensions">inkex.py</dependency>
 	<param name="tab" type="notebook">
 		<page name="measure" _gui-text="Measure">
+			<param name="radioScale" type="optiongroup" _gui-text="Scaling Type: ">
+				<option value="B2S">Big to Small</option>
+				<option value="S2B">Small to Big</option>
+			</param>
 			<param name="type" type="enum" _gui-text="Measurement Type: ">
 				<_item value="length">Length</_item>
 				<_item msgctxt="measure extension" value="area">Area</_item>
@@ -24,19 +28,6 @@
 				<item value="m">m</item>
 				<item value="km">km</item>
 			</param>
-			<param name="radio" type="optiongroup" _gui-text="Scaling Type: ">
-				<option value="string">Big to Small</option>
-				<option value="string">Small to Big</option>
-			</param>
-		</page>
-		<page name="desc" _gui-text="Help">
-			<_param name="measurehelp" type="description" xml:space="preserve">This effect measures the length, area, or center-of-mass of the selected paths. Length and area are added as a text object with the selected units. Center-of-mass is shown as a cross symbol.
-
-  * Text display format can be either Text-On-Path, or stand-alone text at a specified angle.
-  * The number of significant digits can be controlled by the Precision field.
-  * The Offset field controls the distance from the text to the path.
-  * The Scale factor can be used to make measurements in scaled drawings. For example, if 1 cm in the drawing equals 2.5 m in the real world, Scale must be set to 250.
-  * When calculating area, the result should be precise for polygons and Bezier curves. If a circle is used, the area may be too high by as much as 0.03%.</_param>
 		</page>
 		<page name = "dformtestpage" _gui-text="D-Form Help">
 			<_param name="dformhelp" type="description" xml:space="preserve">DFORM Testing! This is a test page! </_param> 
