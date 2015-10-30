@@ -95,6 +95,32 @@ def csplength(csp):
             lengths[-1].append(l)
             total += l
     return lengths, total
+
+def verifyDocument(document):
+    document.set('width', '18in')
+    document.set('height', '32in')
+    
+    margin = inkex.etree.Element(inkex.addNS('rect', 'svg'))
+    margin.set('y', '14.940762')
+    margin.set('x', '-301.96371')
+    margin.set('width', '1022.4807')
+    margin.set('height', '1840.9845')
+    margin.set('stroke', 'red')
+    margin.set('stroke-width', '1')
+    margin.set('fill', 'none')
+    
+    document.append(margin)
+
+    
+def read_stored_info(type, obj):
+    if type == 'pathlength':
+        return float(obj.get(type))
+    elif type == 'segmentlengths':
+        tmp = obj.get(type).split(' ')
+        tmp = map(float, tmp)
+        return tmp
+    return None
+        
     
 class Length(inkex.Effect):
     def __init__(self):
@@ -154,6 +180,15 @@ class Length(inkex.Effect):
                 factor *= scale/self.unittouu('1'+self.options.unit)
                 if self.options.type == "length":
                     slengths, stotal = csplength(p)
+                    
+                    #save the path length and segment lengths in the document 
+                    node.set('pathlength', str(stotal))
+                    tmp = ''
+                    for slen in slengths[0][::-1]:
+                        tmp += str(slen) + ' '
+                    tmp = tmp[:-1] #remove the space at the end
+                    node.set('segmentlengths', tmp)
+                    
                     # self.group = inkex.etree.SubElement(node.getparent(),inkex.addNS('text','svg'))
                     obj_lengths += [stotal]
                     obj_ids += [id]
@@ -188,6 +223,7 @@ class Length(inkex.Effect):
             obj_nodes[id_min].set('transform', 'scale(' + str(ratio) + ' ' + str(ratio) +')')
             fuseTransform(obj_nodes[id_min])
         
+        verifyDocument(doc)
         
         # ratio = obj_lengths[id_min] / obj_lengths[id_max]
         # #obj_nodes[1].get()
