@@ -120,7 +120,65 @@ def read_stored_info(type, obj):
         tmp = map(float, tmp)
         return tmp
     return None
-        
+
+def printValue(value, self):
+#creates text object based on given value (debugging purposes)   
+    what = value
+
+    # Get access to main SVG document element and get its dimensions.
+    svg = self.document.getroot()
+    # or alternatively
+    # svg = self.document.xpath('//svg:svg',namespaces=inkex.NSS)[0]
+
+    # Again, there are two ways to get the attibutes:
+    width  = self.unittouu(svg.get('width'))
+    height = self.unittouu(svg.attrib['height'])
+
+    # Create a new layer.
+    layer = inkex.etree.SubElement(svg, 'g')
+    layer.set(inkex.addNS('label', 'inkscape'), 'Hello %s Layer' % (what))
+    layer.set(inkex.addNS('groupmode', 'inkscape'), 'layer')
+    # Create text element
+    text = inkex.etree.Element(inkex.addNS('text','svg'))
+    text.text = 'Value: %s' % (what)
+
+    # Set text position to center of document.
+    text.set('x', str(width / 2))
+    text.set('y', str(height / 2))
+    # Center text horizontally with CSS style.
+    style = {'text-align' : 'center', 'text-anchor': 'middle'}
+    text.set('style', formatStyle(style))
+
+    # Connect elements together.
+    layer.append(text)
+    
+def originParse(pathTarget):
+# find the starting point of a path
+    dString = pathTarget.get('d')
+    
+    dToken = 1
+    xString = ""
+    yString = ""
+    symbols = "0123456789.-"
+    
+    while dString[dToken] not in symbols:
+        dToken += 1
+    
+    while dString[dToken] in symbols:
+        xString += dString[dToken]
+        dToken += 1
+    
+    while dString[dToken] not in symbols:
+        dToken += 1
+    
+    while dString[dToken] in symbols:
+        yString += dString[dToken]
+        dToken += 1
+    
+    xf = float(xString)
+    yf = float(yString)
+
+    return [xf,yf]    
     
 class Length(inkex.Effect):
     def __init__(self):
@@ -198,9 +256,14 @@ class Length(inkex.Effect):
         
         id_min = 0
         id_max = 1
+        minOrigin = []
+        maxOrigin = []
         if obj_lengths[id_min] > obj_lengths[id_max]:
             id_min = 1
             id_max = 0
+            
+        minOrigin = originParse(obj_nodes[id_min])
+        maxOrigin = originParse(obj_nodes[id_max])
         
         # if (id_min < 2): 
             # x = "1" 
@@ -211,16 +274,26 @@ class Length(inkex.Effect):
         
         if self.options.radioScale == "S2B":
             ratio = obj_lengths[id_min] / obj_lengths[id_max]
-            #obj_ori = parsePath(obj_nodes[id_max])[0]
-            #ori_trans = (obj_ori.x - (ratio * obj_nodes[id_max].x), obj_ori.y - (ratio * obj_nodes[id_max].x))
+            obj_ori = []
+            ori_trans = []      
             obj_nodes[id_max].set('transform', 'scale(' + str(ratio) + ' ' + str(ratio) +')')
             fuseTransform(obj_nodes[id_max])
-            #obj_nodes[id_max].set('transform', 'translate(' + str(ori_trans(0)) + ' ' + ori_trans(1) +')')
-            #fuseTransform(obj_nodes[id_max])
+            
+            obj_ori = originParse(obj_nodes[id_max])
+            ori_trans = [(maxOrigin[0] - obj_ori[0]), (maxOrigin[1] - obj_ori[1])]
+            obj_nodes[id_max].set('transform', 'translate(' + str(ori_trans[0]) + ' ' + str(ori_trans[1]) +')')
+            fuseTransform(obj_nodes[id_max])
+            
         elif self.options.radioScale == "B2S":
             ratio = obj_lengths[id_max] / obj_lengths[id_min]
-            #obj_nodes[1].get()
+            obj_ori = []
+            ori_trans = []
             obj_nodes[id_min].set('transform', 'scale(' + str(ratio) + ' ' + str(ratio) +')')
+            fuseTransform(obj_nodes[id_min])
+            
+            obj_ori = originParse(obj_nodes[id_min])
+            ori_trans = [(minOrigin[0] - obj_ori[0]), (minOrigin[1] - obj_ori[1])]
+            obj_nodes[id_min].set('transform', 'translate(' + str(ori_trans[0]) + ' ' + str(ori_trans[1]) +')')
             fuseTransform(obj_nodes[id_min])
         
         verifyDocument(doc)
