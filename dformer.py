@@ -172,8 +172,8 @@ def addNotches(path, n, offset, angle):
         tmp = offset * math.tan(math.radians(angle))
         dist = math.sqrt(tmp ** 2 + offset ** 2)
         
-        c = computePointAlongLine(p_slope, a, dist)
-        d = computePointAlongLine(p_slope, b, dist)
+        c = computePointAlongLine(ac_slope, a, dist)
+        d = computePointAlongLine(bd_slope, b, dist)
         
         target = ("C", (a, b))
         sub = "L" + a[0] + "," + a[1] + " " + c[0] + "," + c[1] + " " + d[0] + "," + d[1] + " " + b[0] + "," + b[1]
