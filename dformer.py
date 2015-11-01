@@ -39,6 +39,7 @@ import simplestyle
 import simpletransform
 import cubicsuperpath
 import bezmisc
+import math
 
 from simpletransform import fuseTransform
 
@@ -111,6 +112,73 @@ def verifyDocument(document):
     
     document.append(margin)
 
+def rotateSlope((x, y), degrees):
+    degrees = degrees % 360
+    radians = math.radians(degrees)
+    new_x = x * math.cos(radians) - y * math.sin(radians)
+    new_y = x * math.sin(radians) + y * math.cos(radians)
+    return new_x, new_y
+
+def computeSlope((x1, y1), (x2, y2)):
+    return x2 - x1, y2 - y1
+    
+def perpendicularSlope((dx, dy)):
+    return -dy, dx
+    
+def computePointAlongLine((dx, dy), (x, y), distance):
+    #compute unit vector
+    norm = (dx ** 2 + dy ** 2) ** 0.5
+    u_x = dx / norm
+    u_y = dy / norm
+    
+    new_x = x + distance * u_x
+    new_y = y + distance * u_y
+    
+    return new_x, new_y
+    
+def replaceSegmentWith(path, segment, subpath):
+    new_path = []
+    
+    for seg in path:
+        #if the current segment has same type, start point, and end point as the target segment
+        if seg[0] == segment[0] and seg[1][0] == segment[1][0] and seg[1][-1] == segment[1][-1]:
+            for s in subpath:
+                new_path += [s]
+        else:
+            new_path += [seg]
+    
+    return new_path
+
+def findPointPairs(points):
+    pairs = []
+    
+    for i, elem in enumerate(points):
+        if i % 2 != 0:
+            pairs += [(points[i - 1], points[i])]
+    
+    return pairs
+    
+def addNotches(path, n, offset, angle):
+    points = generatePoints(path, n)
+    pt_pairs = findPointPairs(points)
+    
+    for a, b in pt_pairs:
+        slope = computeSlope(a, b)
+        p_slope = perpendicularSlope(slope)
+        
+        ac_slope = rotate_slope(p_slope, angle)
+        bd_slope = rotate_slope(p_slope, 360 - angle)
+        
+        tmp = offset * math.tan(math.radians(angle))
+        dist = math.sqrt(tmp ** 2 + offset ** 2)
+        
+        c = computePointAlongLine(p_slope, a, dist)
+        d = computePointAlongLine(p_slope, b, dist)
+        
+        target = ("C", (a, b))
+        sub = "L" + a[0] + "," + a[1] + " " + c[0] + "," + c[1] + " " + d[0] + "," + d[1] + " " + b[0] + "," + b[1]
+        sub = cubicsuperpath.parsePath(sub)
+        path = replaceSegmentWith(path, target, sub)
     
 def read_stored_info(type, obj):
     if type == 'pathlength':
