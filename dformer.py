@@ -198,29 +198,37 @@ def generatePoints(obj, n):
     targetDist = read_stored_info("pathlength", obj)/ n 
     segmentLengths = read_stored_info("segmentlengths", obj)
     segments = cubicsuperpath.parsePath(obj.get('d'))[0]#segment[i][1][j]
-    new_path = [segments[0]]
-    tmp = obj.get('d')
+    #new_path = [segments[0]]
+
     #raise Exception(str(segments))
-    for i in range(1, len(segments)): 
+    i = 1
+    while i < len(segments): 
         if (segmentLengths[i-1] == targetDist) or segmentLengths[i-1] == 0:
             pointList += [segments[i - 1][-2]]
-            new_path.append(segments[i][:])
+            targetDist -= segmentLengths[i-1]
             #raise Exception(str(pointList))
 
         elif (targetDist > segmentLengths[i-1]):
             #raise Exception(str(targetDist))
             targetDist -= segmentLengths[i-1]
-            new_path.append(segments[i][:])
+
         else:
-            t = targetDist / segmentLengths[i-1] 
+            t = targetDist / float(segmentLengths[i-1]) 
             pointList += [list(bezmisc.bezierpointatt((segments[i-1][-2], segments[i-1][-1], segments[i][0], segments[i][1]), t))]
             
-            targetDist = read_stored_info("pathlength", obj)/ n 
+            
             
             #sub1, sub2 = bezmisc.beziersplitatt((segments[i-1][-2], segments[i-1][-1], segments[i][0], segments[i][1]), t)
-            pathList = addnodes.cspbezsplitatlength(segments[i-1], segments[i], t)
-            new_path = new_path[:-1]
-            new_path += pathList
+            pathList = addnodes.cspbezsplitatlength(segments[i-1], segments[i], t, tolerance=0.000001)
+            prev = segments[:i - 1]
+            next = segments[i + 1:]
+            segments = prev + pathList + next
+            
+            prev = segmentLengths[:i - 1]
+            next = segmentLengths[i:]
+            segmentLengths = prev + [targetDist, segmentLengths[i - 1] - targetDist] + next
+            obj.set('d', cubicsuperpath.formatPath([segments]))
+            targetDist = read_stored_info("pathlength", obj)/ n
             #raise Exception(str(sub1) + "\n" + str(sub2))
             # segments[i - 1][2] = list(sub1[1])
             # segments[i][0] = list(sub1[2])
@@ -233,11 +241,15 @@ def generatePoints(obj, n):
             
             # segments.insert(i + 1, new_seg)
             # i = i + 1
+        inkex.errormsg(str(segmentLengths) + " " + str(i))
+        inkex.errormsg(str(targetDist))
+        i += 1
             
     #raise Exception(str(segments)+ "\n\n" + str(new_path))
     #raise Exception(pointList)
-    obj.set('d', cubicsuperpath.formatPath([new_path]))
-    #inkex.errormsg(tmp + '\n\n' + obj.get('d'))
+    obj.set('d', cubicsuperpath.formatPath([segments]))
+    inkex.errormsg(str(pointList))
+    
     return pointList 
     
 
@@ -438,7 +450,7 @@ class Length(inkex.Effect):
         #for x in range (0, 2): 
         
         points = []
-        points = generatePoints(obj_nodes[id_min], 10)
+        points = generatePoints(obj_nodes[id_min], 16)
         
         
     # Points = empty list
