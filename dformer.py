@@ -39,6 +39,7 @@ import simplestyle
 import simpletransform
 import cubicsuperpath
 import bezmisc
+import addnodes
 
 from simpletransform import fuseTransform 
 from simplepath import parsePath, formatPath
@@ -197,17 +198,19 @@ def generatePoints(obj, n):
     targetDist = read_stored_info("pathlength", obj)/ n 
     segmentLengths = read_stored_info("segmentlengths", obj)
     segments = cubicsuperpath.parsePath(obj.get('d'))[0]#segment[i][1][j]
-    
+    new_path = [segments[0]]
+    tmp = obj.get('d')
     #raise Exception(str(segments))
     for i in range(1, len(segments)): 
         if (segmentLengths[i-1] == targetDist) or segmentLengths[i-1] == 0:
-            pointList += [segments[i][-1]]
+            pointList += [segments[i - 1][-2]]
+            new_path.append(segments[i][:])
             #raise Exception(str(pointList))
 
         elif (targetDist > segmentLengths[i-1]):
             #raise Exception(str(targetDist))
             targetDist -= segmentLengths[i-1]
-            
+            new_path.append(segments[i][:])
         else:
             t = targetDist / segmentLengths[i-1] 
             pointList += [list(bezmisc.bezierpointatt((segments[i-1][-2], segments[i-1][-1], segments[i][0], segments[i][1]), t))]
@@ -216,7 +219,8 @@ def generatePoints(obj, n):
             
             #sub1, sub2 = bezmisc.beziersplitatt((segments[i-1][-2], segments[i-1][-1], segments[i][0], segments[i][1]), t)
             pathList = addnodes.cspbezsplitatlength(segments[i-1], segments[i], t)
-            
+            new_path = new_path[:-1]
+            new_path += pathList
             #raise Exception(str(sub1) + "\n" + str(sub2))
             # segments[i - 1][2] = list(sub1[1])
             # segments[i][0] = list(sub1[2])
@@ -230,9 +234,10 @@ def generatePoints(obj, n):
             # segments.insert(i + 1, new_seg)
             # i = i + 1
             
-    raise Exception(str(pointList))
-    obj.set('d', cubicsuperpath.formatPath([segments]))
-    
+    #raise Exception(str(segments)+ "\n\n" + str(new_path))
+    #raise Exception(pointList)
+    obj.set('d', cubicsuperpath.formatPath([new_path]))
+    #inkex.errormsg(tmp + '\n\n' + obj.get('d'))
     return pointList 
     
 
