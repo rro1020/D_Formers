@@ -271,7 +271,7 @@ class Length(inkex.Effect):
                         dest="offset", default=5,
                         help="Offset")
                         
-        self.OptionParser.add_option("-p2", "--para2",
+        self.OptionParser.add_option("-a", "--para2",
                         action="store", type="float", 
                         dest="para2", default=5,
                         help="Scale Factor (Drawing:Real Length)")
@@ -280,6 +280,11 @@ class Length(inkex.Effect):
                         action="store", type="string", 
                         dest="radioScale", default="B2S",
                         help="Radio Button Scaling")
+                        
+        self.OptionParser.add_option("-b", "--radioBuild",
+                        action="store", type="string", 
+                        dest="radioBuild", default="none",
+                        help="Radio Button Builb Type")
                         
         self.OptionParser.add_option("--tab",
                         action="store", type="string", 
@@ -293,7 +298,7 @@ class Length(inkex.Effect):
 
     def effect(self):
         # get number of digits
-        prec = int(self.options.precision)
+        # prec = int(self.options.precision)
         scale = self.unittouu('1px')    # convert to document units
         factor = 1.0
         doc = self.document.getroot()
