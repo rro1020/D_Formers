@@ -39,9 +39,9 @@ import simplestyle
 import simpletransform
 import cubicsuperpath
 import bezmisc
-import math
 
-from simpletransform import fuseTransform
+from simpletransform import fuseTransform 
+from simplepath import parsePath, formatPath
 
 inkex.localize()
 locale.setlocale(locale.LC_ALL, '')
@@ -97,6 +97,7 @@ def csplength(csp):
             total += l
     return lengths, total
 
+#Defined Functions 
 def verifyDocument(document):
     document.set('width', '18in')
     document.set('height', '32in')
@@ -186,8 +187,55 @@ def read_stored_info(type, obj):
     elif type == 'segmentlengths':
         tmp = obj.get(type).split(' ')
         tmp = map(float, tmp)
+        #raise Exeception(str(tmp))
         return tmp
     return None
+
+# generate points but points are not correct!     
+def generatePoints(obj, n):
+    pointList = []  
+    targetDist = read_stored_info("pathlength", obj)/ n 
+    segmentLengths = read_stored_info("segmentlengths", obj)
+    segments = cubicsuperpath.parsePath(obj.get('d'))[0]#segment[i][1][j]
+    
+    #raise Exception(str(segments))
+    for i in range(1, len(segments)): 
+        if (segmentLengths[i-1] == targetDist) or segmentLengths[i-1] == 0:
+            pointList += [segments[i][-1]]
+            #raise Exception(str(pointList))
+
+        elif (targetDist > segmentLengths[i-1]):
+            #raise Exception(str(targetDist))
+            targetDist -= segmentLengths[i-1]
+            
+        else:
+            t = targetDist / segmentLengths[i-1] 
+            pointList += [list(bezmisc.bezierpointatt((segments[i-1][-2], segments[i-1][-1], segments[i][0], segments[i][1]), t))]
+            
+            targetDist = read_stored_info("pathlength", obj)/ n 
+            
+            #sub1, sub2 = bezmisc.beziersplitatt((segments[i-1][-2], segments[i-1][-1], segments[i][0], segments[i][1]), t)
+            pathList = addnodes.cspbezsplitatlength(segments[i-1], segments[i], t)
+            
+            #raise Exception(str(sub1) + "\n" + str(sub2))
+            # segments[i - 1][2] = list(sub1[1])
+            # segments[i][0] = list(sub1[2])
+            # segments[i][1] = list(sub1[3])
+            
+            # tmp = segments[i][2]
+            # segments[i][2] = list(sub2[1])
+            
+            # new_seg = [list(sub2[2]), list(sub2[3]), tmp] 
+            
+            # segments.insert(i + 1, new_seg)
+            # i = i + 1
+            
+    raise Exception(str(pointList))
+    obj.set('d', cubicsuperpath.formatPath([segments]))
+    
+    return pointList 
+    
+
 
 def printValue(value, self):
 #creates text object based on given value (debugging purposes)   
@@ -298,7 +346,7 @@ class Length(inkex.Effect):
 
     def effect(self):
         # get number of digits
-        # prec = int(self.options.precision)
+        #prec = int(self.options.precision)
         scale = self.unittouu('1px')    # convert to document units
         factor = 1.0
         doc = self.document.getroot()
@@ -347,13 +395,6 @@ class Length(inkex.Effect):
         minOrigin = originParse(obj_nodes[id_min])
         maxOrigin = originParse(obj_nodes[id_max])
         
-        # if (id_min < 2): 
-            # x = "1" 
-            # layer = inkex.etree.SubElement(doc, 'g')
-            # text = inkex.etree.Element(inkex.addNS('text', 'svg'))
-            # text.text = x 
-            # layer.append(text)
-        
         if self.options.radioScale == "S2B":
             ratio = obj_lengths[id_min] / obj_lengths[id_max]
             obj_ori = []
@@ -378,7 +419,7 @@ class Length(inkex.Effect):
             obj_nodes[id_min].set('transform', 'translate(' + str(ori_trans[0]) + ' ' + str(ori_trans[1]) +')')
             fuseTransform(obj_nodes[id_min])
         
-        verifyDocument(doc)
+        #verifyDocument(doc)
         
         # ratio = obj_lengths[id_min] / obj_lengths[id_max]
         # #obj_nodes[1].get()
@@ -390,9 +431,28 @@ class Length(inkex.Effect):
         #len = obj_nodes[id_max].getTotalLength(); 
         
         #for x in range (0, 2): 
-            
-        pointList = [] 
-        #q = inkex.getElementById(doc, obj_nodes[id_min]); 
+        
+        points = []
+        points = generatePoints(obj_nodes[id_min], 10)
+        
+        
+    # Points = empty list
+	# TargetDist = (length of P) / N
+	# i = 0
+	# while the length of Points is less than N:
+        # if the length of segment i is equal to TargetDist:
+            # Append the endpoint of segment i onto Points
+        # else if the length of segment i is larger than TargetDist:
+            # Subtract the length of segment i from TargetDist
+		# otherwise
+			# t = TargetDist / (length of segment i)
+			# SplitPoint = SplitBCurve(segment i, t)
+			# Append SplitPoint onto Points
+			# TargetDist =  (length of P) / N
+	# return Points
+        
+        
+    #q = inkex.getElementById(doc, obj_nodes[id_min]); 
         
 
     # def addCross(self, node, x, y, scale):
