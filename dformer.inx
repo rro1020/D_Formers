@@ -1,22 +1,25 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <inkscape-extension xmlns="http://www.inkscape.org/namespace/inkscape/extension">
-	<_name>D-Test</_name>
+	<_name>D-Former</_name>
 	<id>com.njhurst.filter.dformer</id>
 	<dependency type="executable" location="extensions">dformer.py</dependency>
 	<dependency type="executable" location="extensions">inkex.py</dependency>
 	<param name="tab" type="notebook">
-		<page name="measure" _gui-text="Measure">
-			<param name="radioScale" type="optiongroup" _gui-text="Scaling Type: ">
+		<page name="dform" _gui-text="D-Form">
+            <param name="radioScale" type="optiongroup" _gui-text="Scaling Type:">
 				<option value="B2S">Big to Small</option>
 				<option value="S2B">Small to Big</option>
 			</param>
-			<param name="type" type="enum" _gui-text="Measurement Type: ">
-				<_item value="length">Length</_item>
-				<_item msgctxt="measure extension" value="area">Area</_item>
-				<_item msgctxt="measure extension" value="cofm">Center of Mass</_item>
+            <param name="radioBuild" type="optiongroup" _gui-text="Build Type:">
+				<option value="none">None</option>
+				<option value="stitch">Stitching</option>
+                <option value="teeth">Teeth</option>
+				<option value="leaves">Leaves</option>
+                <option value="hinge">Hinge</option>
 			</param>
-			<param name="precision" type="int" min="0" max="25" _gui-text="Precision:">2</param>
-			<param name="scale" type="float" min="1e-8" max="1e10" _gui-text="Scale Factor (Drawing:Real Length) = 1:">1</param>
+            <_param name="argue" type="description" xml:space="preserve">Arguments:</_param>
+			<param name="points" type="int" min="0" max="100" _gui-text="Number of Connectors:">20</param>
+			<param name="offset" type="float" min="1e-8" max="1e10" _gui-text="Offset:">5</param>
 			<param name="unit" type="enum" _gui-text="Length Unit:">
 				<item value="px">px</item>
 				<item value="pt">pt</item>
@@ -28,6 +31,16 @@
 				<item value="m">m</item>
 				<item value="km">km</item>
 			</param>
+            <param name="para2" type="float" min="1e-8" max="1e10" _gui-text="Diameter/Angle:">5</param>
+		</page>
+		<page name="desc" _gui-text="Help">
+			<_param name="measurehelp" type="description" xml:space="preserve">This effect measures the length, area, or center-of-mass of the selected paths. Length and area are added as a text object with the selected units. Center-of-mass is shown as a cross symbol.
+
+  * Text display format can be either Text-On-Path, or stand-alone text at a specified angle.
+  * The number of significant digits can be controlled by the Precision field.
+  * The Offset field controls the distance from the text to the path.
+  * The Scale factor can be used to make measurements in scaled drawings. For example, if 1 cm in the drawing equals 2.5 m in the real world, Scale must be set to 250.
+  * When calculating area, the result should be precise for polygons and Bezier curves. If a circle is used, the area may be too high by as much as 0.03%.</_param>
 		</page>
 		<page name = "dformtestpage" _gui-text="D-Form Help">
 			<_param name="dformhelp" type="description" xml:space="preserve">DFORM Testing! This is a test page! </_param> 
