@@ -198,17 +198,18 @@ def generatePoints(obj, n):
     targetDist = read_stored_info("pathlength", obj)/ n 
     segmentLengths = read_stored_info("segmentlengths", obj)
     segments = cubicsuperpath.parsePath(obj.get('d'))[0]#segment[i][1][j]
-    #new_path = [segments[0]]
+    new_path = segments
 
     #raise Exception(str(segments))
     i = 1
+    count = 0
     while i < len(segments): 
-        if (segmentLengths[i-1] == targetDist) or segmentLengths[i-1] == 0:
+        if (segmentLengths[i-1] == targetDist) :
             pointList += [segments[i - 1][-2]]
             targetDist -= segmentLengths[i-1]
             #raise Exception(str(pointList))
 
-        elif (targetDist > segmentLengths[i-1]):
+        elif (targetDist > segmentLengths[i-1]) or segmentLengths[i-1] == 0:
             #raise Exception(str(targetDist))
             targetDist -= segmentLengths[i-1]
 
@@ -228,7 +229,9 @@ def generatePoints(obj, n):
             next = segmentLengths[i:]
             segmentLengths = prev + [targetDist, segmentLengths[i - 1] - targetDist] + next
             obj.set('d', cubicsuperpath.formatPath([segments]))
-            targetDist = read_stored_info("pathlength", obj)/ n
+            targetDist = read_stored_info("pathlength", obj)/n
+            i += 1
+            count += 1
             #raise Exception(str(sub1) + "\n" + str(sub2))
             # segments[i - 1][2] = list(sub1[1])
             # segments[i][0] = list(sub1[2])
@@ -241,14 +244,16 @@ def generatePoints(obj, n):
             
             # segments.insert(i + 1, new_seg)
             # i = i + 1
-        inkex.errormsg(str(segmentLengths) + " " + str(i))
-        inkex.errormsg(str(targetDist))
+        #inkex.errormsg(str(segmentLengths) + " " + str(i))
+        #inkex.errormsg(str(targetDist))
         i += 1
             
     #raise Exception(str(segments)+ "\n\n" + str(new_path))
     #raise Exception(pointList)
     obj.set('d', cubicsuperpath.formatPath([segments]))
-    inkex.errormsg(str(pointList))
+    inkex.errormsg(str(len(segmentLengths)))
+    inkex.errormsg(str(len(segments)))
+    inkex.errormsg(str(count))
     
     return pointList 
     
@@ -449,8 +454,34 @@ class Length(inkex.Effect):
         
         #for x in range (0, 2): 
         
+        for id, node in self.selected.iteritems():
+            if node.tag == inkex.addNS('path','svg'):
+                mat = simpletransform.composeParents(node, [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]])
+                p = cubicsuperpath.parsePath(node.get('d'))
+                simpletransform.applyTransformToPath(mat, p)
+                factor *= scale/self.unittouu('1'+self.options.unit)
+                if self.options.type == "length":
+                    slengths, stotal = csplength(p)
+                    
+                    #save the path length and segment lengths in the document 
+                    node.set('pathlength', str(stotal))
+                    tmp = ''
+                    for slen in slengths[0][::-1]:
+                        tmp += str(slen) + ' '
+                    tmp = tmp[:-1] #remove the space at the end
+                    node.set('segmentlengths', tmp)
+                    
+                    # self.group = inkex.etree.SubElement(node.getparent(),inkex.addNS('text','svg'))
+                    obj_lengths += [stotal]
+                    obj_ids += [id]
+                    obj_nodes += [node] 
+                # Format the length as string
+                # lenstr = locale.format("%(len)25."+str(prec)+"f",{'len':round(stotal*factor*self.options.scale,prec)}).strip()
+        
         points = []
-        points = generatePoints(obj_nodes[id_min], 16)
+        points = generatePoints(obj_nodes[id_min], 5)
+        inkex.errormsg(str(points))
+        inkex.errormsg(str(len(points)))
         
         
     # Points = empty list
