@@ -204,9 +204,10 @@ def generatePoints(obj, n):
     i = 1
     count = 0
     while i < len(segments): 
+        inkex.errormsg(str(segmentLengths))
         if (segmentLengths[i-1] == targetDist) :
             pointList += [segments[i - 1][-2]]
-            targetDist -= segmentLengths[i-1]
+            targetDist = read_stored_info("pathlength", obj)/ n
             #raise Exception(str(pointList))
 
         elif (targetDist > segmentLengths[i-1]) or segmentLengths[i-1] == 0:
@@ -216,8 +217,6 @@ def generatePoints(obj, n):
         else:
             t = targetDist / float(segmentLengths[i-1]) 
             pointList += [list(bezmisc.bezierpointatt((segments[i-1][-2], segments[i-1][-1], segments[i][0], segments[i][1]), t))]
-            
-            
             
             #sub1, sub2 = bezmisc.beziersplitatt((segments[i-1][-2], segments[i-1][-1], segments[i][0], segments[i][1]), t)
             pathList = addnodes.cspbezsplitatlength(segments[i-1], segments[i], t, tolerance=0.000001)
@@ -230,22 +229,8 @@ def generatePoints(obj, n):
             segmentLengths = prev + [targetDist, segmentLengths[i - 1] - targetDist] + next
             obj.set('d', cubicsuperpath.formatPath([segments]))
             targetDist = read_stored_info("pathlength", obj)/n
-            i += 1
             count += 1
-            #raise Exception(str(sub1) + "\n" + str(sub2))
-            # segments[i - 1][2] = list(sub1[1])
-            # segments[i][0] = list(sub1[2])
-            # segments[i][1] = list(sub1[3])
             
-            # tmp = segments[i][2]
-            # segments[i][2] = list(sub2[1])
-            
-            # new_seg = [list(sub2[2]), list(sub2[3]), tmp] 
-            
-            # segments.insert(i + 1, new_seg)
-            # i = i + 1
-        #inkex.errormsg(str(segmentLengths) + " " + str(i))
-        #inkex.errormsg(str(targetDist))
         i += 1
             
     #raise Exception(str(segments)+ "\n\n" + str(new_path))
@@ -443,17 +428,6 @@ class Length(inkex.Effect):
         
         #verifyDocument(doc)
         
-        # ratio = obj_lengths[id_min] / obj_lengths[id_max]
-        # #obj_nodes[1].get()
-        # obj_nodes[id_max].set('transform', 'scale(' + str(ratio) + ' ' + str(ratio) +')')
-        
-        # fuseTransform(obj_nodes[id_max])
-        #fuseScale(obj_nodes[id_max])
-        
-        #len = obj_nodes[id_max].getTotalLength(); 
-        
-        #for x in range (0, 2): 
-        
         for id, node in self.selected.iteritems():
             if node.tag == inkex.addNS('path','svg'):
                 mat = simpletransform.composeParents(node, [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]])
@@ -479,7 +453,7 @@ class Length(inkex.Effect):
                 # lenstr = locale.format("%(len)25."+str(prec)+"f",{'len':round(stotal*factor*self.options.scale,prec)}).strip()
         
         points = []
-        points = generatePoints(obj_nodes[id_min], 5)
+        points = generatePoints(obj_nodes[id_min], 16)
         inkex.errormsg(str(points))
         inkex.errormsg(str(len(points)))
         
