@@ -201,43 +201,57 @@ def generatePoints(obj, n):
     new_path = segments
 
     #raise Exception(str(segments))
-    i = 1
+    i = 0
     count = 0
-    while i < len(segments): 
-        inkex.errormsg(str(segmentLengths))
-        if (segmentLengths[i-1] == targetDist) :
-            pointList += [segments[i - 1][-2]]
+    total = 0
+    while i < len(segments) - 1: 
+        inkex.errormsg("Target Distance = " + str(targetDist) + "  " + str(i))
+        if (segmentLengths[i] - targetDist) <= 0.001 and (segmentLengths[i] - targetDist) >= -0.001:
+            pointList += [segments[i][1]]
+	    inkex.errormsg("added point " + str(pointList[-1]))
             targetDist = read_stored_info("pathlength", obj)/ n
             #raise Exception(str(pointList))
 
-        elif (targetDist > segmentLengths[i-1]) or segmentLengths[i-1] == 0:
+        elif (targetDist > segmentLengths[i]) or segmentLengths[i] == 0:
             #raise Exception(str(targetDist))
-            targetDist -= segmentLengths[i-1]
+            targetDist -= segmentLengths[i]
 
         else:
-            t = targetDist / float(segmentLengths[i-1]) 
-            pointList += [list(bezmisc.bezierpointatt((segments[i-1][-2], segments[i-1][-1], segments[i][0], segments[i][1]), t))]
+            t = targetDist / float(segmentLengths[i]) 
+            
             
             #sub1, sub2 = bezmisc.beziersplitatt((segments[i-1][-2], segments[i-1][-1], segments[i][0], segments[i][1]), t)
-            pathList = addnodes.cspbezsplitatlength(segments[i-1], segments[i], t, tolerance=0.000001)
+            pathList = addnodes.cspbezsplitatlength(segments[i-1], segments[i], t, tolerance=0.00000001)
+	    pointList += [pathList[1][2]]
+	    inkex.errormsg("added point " + str(pointList[-1]))
             prev = segments[:i - 1]
             next = segments[i + 1:]
             segments = prev + pathList + next
+	    #segments[i - 1] = pathList[0]
+	    #segments[i] = pathList[1]
+	    #segments[i + 1] = pathList[2]
             
-            prev = segmentLengths[:i - 1]
-            next = segmentLengths[i:]
-            segmentLengths = prev + [targetDist, segmentLengths[i - 1] - targetDist] + next
+            prev = segmentLengths[:i]
+            next = segmentLengths[i+1:]
+            segmentLengths = prev + [cspseglength(pathList[0],pathList[1]), cspseglength(pathList[1],pathList[2])] + next
+	    
+	    
+	    
             obj.set('d', cubicsuperpath.formatPath([segments]))
             targetDist = read_stored_info("pathlength", obj)/n
+	    
+	    inkex.errormsg(str(segmentLengths))
+	    inkex.errormsg('\n\n')
             count += 1
-            
+        total += segmentLengths[i]   
         i += 1
             
     #raise Exception(str(segments)+ "\n\n" + str(new_path))
     #raise Exception(pointList)
+    inkex.errormsg(str(read_stored_info("pathlength", obj)) + " == " + str(total))
     obj.set('d', cubicsuperpath.formatPath([segments]))
     inkex.errormsg(str(len(segmentLengths)))
-    inkex.errormsg(str(len(segments)))
+    inkex.errormsg(str(segments))
     inkex.errormsg(str(count))
     
     return pointList 
@@ -457,6 +471,29 @@ class Length(inkex.Effect):
         inkex.errormsg(str(points))
         inkex.errormsg(str(len(points)))
         
+	for id, node in self.selected.iteritems():
+            if node.tag == inkex.addNS('path','svg'):
+                mat = simpletransform.composeParents(node, [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]])
+                p = cubicsuperpath.parsePath(node.get('d'))
+                simpletransform.applyTransformToPath(mat, p)
+                factor *= scale/self.unittouu('1'+self.options.unit)
+                if self.options.type == "length":
+                    slengths, stotal = csplength(p)
+                    
+                    #save the path length and segment lengths in the document 
+                    node.set('pathlength', str(stotal))
+                    tmp = ''
+                    for slen in slengths[0][::-1]:
+                        tmp += str(slen) + ' '
+                    tmp = tmp[:-1] #remove the space at the end
+                    node.set('segmentlengths', tmp)
+                    
+                    # self.group = inkex.etree.SubElement(node.getparent(),inkex.addNS('text','svg'))
+                    obj_lengths += [stotal]
+                    obj_ids += [id]
+                    obj_nodes += [node] 
+                # Format the length as string
+                # lenstr = locale.format("%(len)25."+str(prec)+"f",{'len':round(stotal*factor*self.options.scale,prec)}).strip()
         
     # Points = empty list
 	# TargetDist = (length of P) / N
