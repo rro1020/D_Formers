@@ -200,58 +200,70 @@ def generatePoints(obj, n):
     segments = cubicsuperpath.parsePath(obj.get('d'))[0]#segment[i][1][j]
     new_path = segments
 
-    #raise Exception(str(segments))
+
+    
     i = 0
     count = 0
     total = 0
+    inkex.errormsg("Len(segments) = " + str(len(segments)));
     while i < len(segments) - 1: 
         inkex.errormsg("Target Distance = " + str(targetDist) + "  " + str(i))
+        inkex.errormsg("segmentLengths = " + str(segmentLengths))
         if (segmentLengths[i] - targetDist) <= 0.001 and (segmentLengths[i] - targetDist) >= -0.001:
             pointList += [segments[i][1]]
-	    inkex.errormsg("added point " + str(pointList[-1]))
+            inkex.errormsg("added point " + str(pointList[-1]))
             targetDist = read_stored_info("pathlength", obj)/ n
             #raise Exception(str(pointList))
 
-        elif (targetDist > segmentLengths[i]) or segmentLengths[i] == 0:
+        elif targetDist > segmentLengths[i] or segmentLengths[i] == 0:
             #raise Exception(str(targetDist))
             targetDist -= segmentLengths[i]
 
         else:
             t = targetDist / float(segmentLengths[i]) 
             
+            inkex.errormsg("t = " + str(t))
+            inkex.errormsg("targetPt = " + str(bezmisc.bezierpointatt((segments[i - 1][1], segments[i - 1][2], segments[i][0], segments[i][1]),t)))
+             
+            t1 = segments[i-1][1]
+            t2 = segments[i][1]
             
             #sub1, sub2 = bezmisc.beziersplitatt((segments[i-1][-2], segments[i-1][-1], segments[i][0], segments[i][1]), t)
             pathList = addnodes.cspbezsplitatlength(segments[i-1], segments[i], t, tolerance=0.00000001)
-	    pointList += [pathList[1][2]]
-	    inkex.errormsg("added point " + str(pointList[-1]))
+            pointList += [pathList[1][1]]
+            inkex.errormsg("added point " + str(pointList[-1]))
             prev = segments[:i - 1]
             next = segments[i + 1:]
             segments = prev + pathList + next
-	    #segments[i - 1] = pathList[0]
-	    #segments[i] = pathList[1]
-	    #segments[i + 1] = pathList[2]
+            #inkex.errormsg("Segments[\n" + str(segments) + "\n]")
+            
+            len1 = cspseglength(pathList[0],pathList[1], tolerance=0.00000001)
+            len2 = cspseglength(pathList[1],pathList[2], tolerance=0.00000001)
+            inkex.errormsg("Split Point = " + str(pointList[-1]))
+            inkex.errormsg(str(len1) + " " + str(len2) + " " + str(segmentLengths[i]))
             
             prev = segmentLengths[:i]
             next = segmentLengths[i+1:]
-            segmentLengths = prev + [cspseglength(pathList[0],pathList[1]), cspseglength(pathList[1],pathList[2])] + next
-	    
-	    
-	    
+            inkex.errormsg("Pathlist = " + str(pathList))
+            segmentLengths = prev + [len1, len2] + next
+        
+        
             obj.set('d', cubicsuperpath.formatPath([segments]))
             targetDist = read_stored_info("pathlength", obj)/n
-	    
-	    inkex.errormsg(str(segmentLengths))
-	    inkex.errormsg('\n\n')
+            
+            
+
+            inkex.errormsg("SegmentLengths[\n" + str(segmentLengths) + "\n]")
+            inkex.errormsg('\n\n')
             count += 1
         total += segmentLengths[i]   
         i += 1
             
     #raise Exception(str(segments)+ "\n\n" + str(new_path))
     #raise Exception(pointList)
-    inkex.errormsg(str(read_stored_info("pathlength", obj)) + " == " + str(total))
     obj.set('d', cubicsuperpath.formatPath([segments]))
     inkex.errormsg(str(len(segmentLengths)))
-    inkex.errormsg(str(segments))
+    inkex.errormsg(str(len(segments)))
     inkex.errormsg(str(count))
     
     return pointList 
@@ -467,48 +479,10 @@ class Length(inkex.Effect):
                 # lenstr = locale.format("%(len)25."+str(prec)+"f",{'len':round(stotal*factor*self.options.scale,prec)}).strip()
         
         points = []
-        points = generatePoints(obj_nodes[id_min], 16)
+        points = generatePoints(obj_nodes[id_min], 4)
         inkex.errormsg(str(points))
         inkex.errormsg(str(len(points)))
         
-	for id, node in self.selected.iteritems():
-            if node.tag == inkex.addNS('path','svg'):
-                mat = simpletransform.composeParents(node, [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]])
-                p = cubicsuperpath.parsePath(node.get('d'))
-                simpletransform.applyTransformToPath(mat, p)
-                factor *= scale/self.unittouu('1'+self.options.unit)
-                if self.options.type == "length":
-                    slengths, stotal = csplength(p)
-                    
-                    #save the path length and segment lengths in the document 
-                    node.set('pathlength', str(stotal))
-                    tmp = ''
-                    for slen in slengths[0][::-1]:
-                        tmp += str(slen) + ' '
-                    tmp = tmp[:-1] #remove the space at the end
-                    node.set('segmentlengths', tmp)
-                    
-                    # self.group = inkex.etree.SubElement(node.getparent(),inkex.addNS('text','svg'))
-                    obj_lengths += [stotal]
-                    obj_ids += [id]
-                    obj_nodes += [node] 
-                # Format the length as string
-                # lenstr = locale.format("%(len)25."+str(prec)+"f",{'len':round(stotal*factor*self.options.scale,prec)}).strip()
-        
-    # Points = empty list
-	# TargetDist = (length of P) / N
-	# i = 0
-	# while the length of Points is less than N:
-        # if the length of segment i is equal to TargetDist:
-            # Append the endpoint of segment i onto Points
-        # else if the length of segment i is larger than TargetDist:
-            # Subtract the length of segment i from TargetDist
-		# otherwise
-			# t = TargetDist / (length of segment i)
-			# SplitPoint = SplitBCurve(segment i, t)
-			# Append SplitPoint onto Points
-			# TargetDist =  (length of P) / N
-	# return Points
         
         
     #q = inkex.getElementById(doc, obj_nodes[id_min]); 
