@@ -18,7 +18,7 @@
                 <option value="hinge">Hinge</option>
 			</param>
             <_param name="argue" type="description" xml:space="preserve">Arguments:</_param>
-			<param name="points" type="int" min="0" max="100" _gui-text="Number of Connectors:">20</param>
+			<param name="points" type="int" min="1" max="100" _gui-text="Number of Connectors:">20</param>
 			<param name="offset" type="float" min="1e-8" max="1e10" _gui-text="Offset:">5</param>
 			<param name="unit" type="enum" _gui-text="Length Unit:">
 				<item value="px">px</item>
