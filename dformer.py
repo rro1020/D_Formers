@@ -293,7 +293,18 @@ def generatePoints(obj, n):
     
     return pointList 
     
-
+def drawCircle(tarPoint, radius, doc):
+#draws a circle at a point
+    
+    circ = inkex.etree.Element(inkex.addNS('circle', 'svg'))
+    circ.set('cx', str(tarPoint[0]))
+    circ.set('cy', str(tarPoint[1]))
+    circ.set('r', str(radius))
+    circ.set('stroke', 'black')
+    circ.set('stroke-width', '1')
+    circ.set('fill', 'white')
+    
+    doc.append(circ)
 
 def printValue(value, self):
 #creates text object based on given value (debugging purposes)   
@@ -453,7 +464,7 @@ class Length(inkex.Effect):
         minOrigin = originParse(obj_nodes[id_min])
         maxOrigin = originParse(obj_nodes[id_max])
         
-        if self.options.radioScale == "S2B":
+        if self.options.radioScale == "B2S":
             ratio = obj_lengths[id_min] / obj_lengths[id_max]
             obj_ori = []
             ori_trans = []      
@@ -461,11 +472,12 @@ class Length(inkex.Effect):
             fuseTransform(obj_nodes[id_max])
             
             obj_ori = originParse(obj_nodes[id_max])
+            #drawCircle(obj_ori, self.options.para2, doc)
             ori_trans = [(maxOrigin[0] - obj_ori[0]), (maxOrigin[1] - obj_ori[1])]
             obj_nodes[id_max].set('transform', 'translate(' + str(ori_trans[0]) + ' ' + str(ori_trans[1]) +')')
             fuseTransform(obj_nodes[id_max])
             
-        elif self.options.radioScale == "B2S":
+        elif self.options.radioScale == "S2B":
             ratio = obj_lengths[id_max] / obj_lengths[id_min]
             obj_ori = []
             ori_trans = []
@@ -473,6 +485,7 @@ class Length(inkex.Effect):
             fuseTransform(obj_nodes[id_min])
             
             obj_ori = originParse(obj_nodes[id_min])
+            #drawCircle(obj_ori, self.options.para2, doc)
             ori_trans = [(minOrigin[0] - obj_ori[0]), (minOrigin[1] - obj_ori[1])]
             obj_nodes[id_min].set('transform', 'translate(' + str(ori_trans[0]) + ' ' + str(ori_trans[1]) +')')
             fuseTransform(obj_nodes[id_min])
@@ -510,7 +523,7 @@ class Length(inkex.Effect):
         inkex.errormsg(str(points))
         inkex.errormsg(str(len(points)))
         
-        
+        #buildType Radio Button Here
         
     #q = inkex.getElementById(doc, obj_nodes[id_min]); 
         
