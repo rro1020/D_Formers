@@ -40,6 +40,7 @@ import simpletransform
 import cubicsuperpath
 import bezmisc
 import addnodes
+import math
 
 from simpletransform import fuseTransform 
 from simplepath import parsePath, formatPath
@@ -160,27 +161,49 @@ def findPointPairs(points):
     
     return pairs
     
-def addNotches(path, n, offset, angle):
-    points = generatePoints(path, n)
+def addNotches(path, n, offset, angle, document):
+    points = generatePoints(path, 2 * n)
     pt_pairs = findPointPairs(points)
     
     for a, b in pt_pairs:
         slope = computeSlope(a, b)
         p_slope = perpendicularSlope(slope)
         
-        ac_slope = rotate_slope(p_slope, angle)
-        bd_slope = rotate_slope(p_slope, 360 - angle)
+        ac_slope = rotateSlope(p_slope, 360 - angle)
+        bd_slope = rotateSlope(p_slope, angle)
         
         tmp = offset * math.tan(math.radians(angle))
         dist = math.sqrt(tmp ** 2 + offset ** 2)
         
-        c = computePointAlongLine(ac_slope, a, dist)
-        d = computePointAlongLine(bd_slope, b, dist)
+        c = computePointAlongLine(ac_slope, a, -dist)
+        d = computePointAlongLine(bd_slope, b, -dist)
         
-        target = ("C", (a, b))
-        sub = "L" + a[0] + "," + a[1] + " " + c[0] + "," + c[1] + " " + d[0] + "," + d[1] + " " + b[0] + "," + b[1]
-        sub = cubicsuperpath.parsePath(sub)
-        path = replaceSegmentWith(path, target, sub)
+        line_ac = inkex.etree.Element(inkex.addNS('line', 'svg'))
+        line_ac.set('x1', str(a[0]))
+        line_ac.set('y1', str(a[1]))
+        line_ac.set('x2', str(c[0]))
+        line_ac.set('y2', str(c[1]))
+        line_ac.set('stroke', 'red')
+        
+        line_cd = inkex.etree.Element(inkex.addNS('line', 'svg'))
+        line_cd.set('x1', str(c[0]))
+        line_cd.set('y1', str(c[1]))
+        line_cd.set('x2', str(d[0]))
+        line_cd.set('y2', str(d[1]))
+        line_cd.set('stroke', 'red')
+        
+        line_db = inkex.etree.Element(inkex.addNS('line', 'svg'))
+        line_db.set('x1', str(d[0]))
+        line_db.set('y1', str(d[1]))
+        line_db.set('x2', str(b[0]))
+        line_db.set('y2', str(b[1]))
+        line_db.set('stroke', 'red')
+        
+        document.append(line_ac)
+        document.append(line_cd)
+        document.append(line_db)
+        
+        
     
 def read_stored_info(type, obj):
     if type == 'pathlength':
@@ -481,8 +504,9 @@ class Length(inkex.Effect):
                 # lenstr = locale.format("%(len)25."+str(prec)+"f",{'len':round(stotal*factor*self.options.scale,prec)}).strip()
         
         points = []
-        points = generatePoints(obj_nodes[id_min], self.options.points)
+        #points = generatePoints(obj_nodes[id_min], self.options.points)
         #points = generatePoints(obj_nodes[id_max], self.options.points)
+        addNotches(obj_nodes[id_min], self.options.points, self.options.offset, self.options.para2,doc)
         inkex.errormsg(str(points))
         inkex.errormsg(str(len(points)))
         
