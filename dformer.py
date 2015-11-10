@@ -139,16 +139,27 @@ def computePointAlongLine((dx, dy), (x, y), distance):
     
     return new_x, new_y
     
-def replaceSegmentWith(path, segment, subpath):
-    new_path = []
+def replaceSegmentWith(path, start, end, subpath):
+    new_path = ""
     
-    for seg in path:
-        #if the current segment has same type, start point, and end point as the target segment
-        if seg[0] == segment[0] and seg[1][0] == segment[1][0] and seg[1][-1] == segment[1][-1]:
-            for s in subpath:
-                new_path += [s]
+    split_path = path.replace("L", "C").split("C")
+    
+    curves = split_path[1:]
+    new_path += split_path[0] + curves[0]
+    i = 1
+    while i < len(curves):
+        points = curves[i - 1].split()
+        inkex.errormsg(str(start) + " " + str(end) + " " + curves[i] + '\n')
+        if start == (float(points[-2]), float(points[-1])):
+            points = curves[i].split()
+            while end != (points[-2], points[-1]):
+                i += 1
+                points = curves[i].split()
+            new_path += subpath
         else:
-            new_path += [seg]
+            new_path += "C" + curves[i]
+        
+        i += 1
     
     return new_path
 
@@ -164,7 +175,7 @@ def findPointPairs(points):
 def addNotches(path, n, offset, angle, document):
     points = generatePoints(path, 2 * n)
     pt_pairs = findPointPairs(points)
-    
+    inkex.errormsg("pt_pairs = " + str(pt_pairs))
     for a, b in pt_pairs:
         slope = computeSlope(a, b)
         p_slope = perpendicularSlope(slope)
@@ -203,6 +214,7 @@ def addNotches(path, n, offset, angle, document):
         document.append(line_cd)
         document.append(line_db)
         
+        #replaceSegmentWith(path.get('d'), a, b, '')
         
     
 def read_stored_info(type, obj):
@@ -219,22 +231,28 @@ def read_stored_info(type, obj):
 def generatePoints(obj, n):
     pointList = []  
     targetDist = read_stored_info("pathlength", obj)/ n 
-    segmentLengths = read_stored_info("segmentlengths", obj)
-    segments = cubicsuperpath.parsePath(obj.get('d'))[0]
-    segments += [segments[0]]#segment[i][1][j]
-    segmentLengths += [segmentLengths[0]]
-    new_path = segments
-
-
+    segmentLengths = [0.0] + read_stored_info("segmentlengths", obj)[::-1]
     
-    i = 1
+    mat = simpletransform.composeParents(obj, [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]])
+    p = cubicsuperpath.parsePath(obj.get('d'))
+    simpletransform.applyTransformToPath(mat, p)
+    
+    segments = p[0]
+    new_path = segments
+    
+    i = 0
     count = 0
     total = 0
-    inkex.errormsg("Len(segments) = " + str(len(segments)));
+    inkex.errormsg("Len(segments) = " + str(len(segments)))
+    
     while i < len(segments) - 1: 
         inkex.errormsg("Target Distance = " + str(targetDist) + "  " + str(i))
+        inkex.errormsg(str(len(segments)) + " " + str(len(segmentLengths)))
         inkex.errormsg("segmentLengths = " + str(segmentLengths))
-        if (segmentLengths[i] - targetDist) <= 0.001 and (segmentLengths[i] - targetDist) >= -0.001:
+        #inkex.errormsg("Curve = " + str((segments[i - 1][1], segments[i - 1][2], segments[i][0], segments[i][1])))
+        #inkex.errormsg("record length = " + str(segmentLengths[i]))
+        #inkex.errormsg("measured length = " + str(bezmisc.bezierlength((segments[i - 1][1], segments[i - 1][2], segments[i][0], segments[i][1]),tolerance=0.00001)))
+        if segmentLengths[i] == targetDist:
             pointList += [segments[i][1]]
             inkex.errormsg("0.001 confirmed\n added point " + str(pointList[-1]))
             targetDist = read_stored_info("pathlength", obj)/ n
@@ -254,7 +272,7 @@ def generatePoints(obj, n):
             t2 = segments[i][1]
             
             #sub1, sub2 = bezmisc.beziersplitatt((segments[i-1][-2], segments[i-1][-1], segments[i][0], segments[i][1]), t)
-            pathList = addnodes.cspbezsplitatlength(segments[i-1], segments[i], t, tolerance=0.00000001)
+            pathList = addnodes.cspbezsplitatlength(segments[i-1], segments[i], t,tolerance=0.00001)
             pointList += [pathList[1][1]]
             inkex.errormsg("added point " + str(pointList[-1]))
             prev = segments[:i - 1]
@@ -262,8 +280,16 @@ def generatePoints(obj, n):
             segments = prev + pathList + next
             #inkex.errormsg("Segments[\n" + str(segments) + "\n]")
             
-            len1 = cspseglength(pathList[0],pathList[1], tolerance=0.00000001)
-            len2 = cspseglength(pathList[1],pathList[2], tolerance=0.00000001)
+            #len1 = bezmisc.bezierlength((pathList[0][1][:], pathList[0][2][:], pathList[1][0][:], pathList[1][1][:]),tolerance=0.00001)
+            #len2 = bezmisc.bezierlength((pathList[1][1][:], pathList[1][2][:], pathList[2][0][:], pathList[2][1][:]),tolerance=0.00001)
+            
+            len1 = targetDist
+            len2 = segmentLengths[i] - targetDist
+            
+            if abs((len1 + len2) - segmentLengths[i]) >= 0.0001:
+                raise Exception("There is an issue with the bezier split function. (" + str(len1 + len2) + " vs. " + str(segmentLengths[i]) + ")")
+                
+            
             inkex.errormsg("Split Point = " + str(pointList[-1]))
             inkex.errormsg("len1 = " + str(len1) + "\nlen2 = " + str(len2) + " \nsegmentLengths[i] = " + str(segmentLengths[i]))
             
@@ -272,24 +298,33 @@ def generatePoints(obj, n):
             inkex.errormsg("Pathlist = " + str(pathList))
             segmentLengths = prev + [len1, len2] + next
         
-        
-            obj.set('d', cubicsuperpath.formatPath([segments]) + 'Z')
+            #obj.set('d', cubicsuperpath.formatPath([segments]))
+            #segments = cubicsuperpath.parsePath(obj.get('d'))[0]
             targetDist = read_stored_info("pathlength", obj)/n
             
             
-
+            inkex.errormsg("prev = " + str(prev))
+            inkex.errormsg("next = " + str(next))
             inkex.errormsg("SegmentLengths[\n" + str(segmentLengths) + "\n]")
             inkex.errormsg('\n\n')
             count += 1
-        total += segmentLengths[i]   
         i += 1
-            
+    
+    pointList += [segments[0][1]]
+    
+    if abs(sum(segmentLengths) - read_stored_info("pathlength", obj)) >= 0.001:
+        inkex.errormsg(str(sum(segmentLengths) - read_stored_info("pathlength", obj)))
+        raise Exception("Internal Error: The total length of the new path does not equal the original path.")
     #raise Exception(str(segments)+ "\n\n" + str(new_path))
     #raise Exception(pointList)
+    inkex.errormsg(str(pointList))
     obj.set('d', cubicsuperpath.formatPath([segments[:-1]]) + 'Z')
-    inkex.errormsg(str(len(segmentLengths)))
+    inkex.errormsg("segmentLengths = " + str(len(segmentLengths)))
     inkex.errormsg(str(len(segments)))
     inkex.errormsg(str(count))
+    
+    #if len(pointList) != n:
+    #    raise Exception("Internal Error: The algorithm did not find the required number of points (" + str(len(pointList)) + " out of " + str(n) + ").")
     
     return pointList 
     
@@ -433,6 +468,7 @@ class Length(inkex.Effect):
             if node.tag == inkex.addNS('path','svg'):
                 mat = simpletransform.composeParents(node, [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]])
                 p = cubicsuperpath.parsePath(node.get('d'))
+                node.set('d', cubicsuperpath.formatPath(p))
                 simpletransform.applyTransformToPath(mat, p)
                 factor *= scale/self.unittouu('1'+self.options.unit)
                 if self.options.type == "length":
@@ -491,12 +527,15 @@ class Length(inkex.Effect):
             fuseTransform(obj_nodes[id_min])
         
         #verifyDocument(doc)
-        
+        obj_lengths = []  
+        obj_ids = []
+        obj_nodes = []
         for id, node in self.selected.iteritems():
             if node.tag == inkex.addNS('path','svg'):
                 mat = simpletransform.composeParents(node, [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]])
                 p = cubicsuperpath.parsePath(node.get('d'))
                 simpletransform.applyTransformToPath(mat, p)
+                node.set('d', cubicsuperpath.formatPath(p))
                 factor *= scale/self.unittouu('1'+self.options.unit)
                 if self.options.type == "length":
                     slengths, stotal = csplength(p)
