@@ -518,7 +518,6 @@ class Length(inkex.Effect):
             fuseTransform(obj_nodes[id_max])
             
             obj_ori = originParse(obj_nodes[id_max])
-            #drawCircle(obj_ori, self.options.para2, doc)
             ori_trans = [(maxOrigin[0] - obj_ori[0]), (maxOrigin[1] - obj_ori[1])]
             obj_nodes[id_max].set('transform', 'translate(' + str(ori_trans[0]) + ' ' + str(ori_trans[1]) +')')
             fuseTransform(obj_nodes[id_max])
@@ -568,12 +567,12 @@ class Length(inkex.Effect):
         points = []
         #points = generatePoints(obj_nodes[id_min], self.options.points)
         #points = generatePoints(obj_nodes[id_max], self.options.points)
-        addNotches(obj_nodes[id_min], self.options.points, self.options.offset, self.options.para2,doc)
+        #addNotches(obj_nodes[id_min], self.options.points, self.options.offset, self.options.para2,doc)
         
-        # if self.options.radioBuild == "stitch": 
-            # addStitching(obj_nodes[id_min], self.options.points, self.options.offset, self.options.para2, doc) 
-        # elif self.options.radioBuild == "teeth": 
-            # addNotches(obj_nodes[id_min], self.options.points, self.options.offset, self.options.para2,doc)
+        if self.options.radioBuild == "stitch": 
+            addStitching(obj_nodes[id_min], self.options.points, self.options.offset, self.options.para2, doc) 
+        elif self.options.radioBuild == "teeth": 
+            addNotches(obj_nodes[id_min], self.options.points, self.options.offset, self.options.para2,doc)
         
         inkex.errormsg(str(points))
         inkex.errormsg(str(len(points)))
