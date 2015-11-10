@@ -171,6 +171,16 @@ def findPointPairs(points):
             pairs += [(points[i - 1], points[i])]
     
     return pairs
+
+def addStitching(path, n, offset, diameter, document): 
+    points = generatePoints(path, n) 
+    pointPairs = findPointPairs(points)
+    for p1, p2 in pointPairs:
+        pSlope = perpendicularSlope(computeSlope(p1, p2)) 
+        newPoint1 = computePointAlongLine(pSlope, p1, offset)
+        newPoint2 = computePointAlongLine(pSlope, p2, offset)
+        drawCircle(newPoint1, diameter/2, document)
+        drawCircle(newPoint2, diameter/2, document)
     
 def addNotches(path, n, offset, angle, document):
     points = generatePoints(path, 2 * n)
@@ -559,6 +569,12 @@ class Length(inkex.Effect):
         #points = generatePoints(obj_nodes[id_min], self.options.points)
         #points = generatePoints(obj_nodes[id_max], self.options.points)
         addNotches(obj_nodes[id_min], self.options.points, self.options.offset, self.options.para2,doc)
+        
+        # if self.options.radioBuild == "stitch": 
+            # addStitching(obj_nodes[id_min], self.options.points, self.options.offset, self.options.para2, doc) 
+        # elif self.options.radioBuild == "teeth": 
+            # addNotches(obj_nodes[id_min], self.options.points, self.options.offset, self.options.para2,doc)
+        
         inkex.errormsg(str(points))
         inkex.errormsg(str(len(points)))
         

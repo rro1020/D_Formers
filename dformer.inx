@@ -31,7 +31,7 @@
 				<item value="m">m</item>
 				<item value="km">km</item>
 			</param>
-            <param name="para2" type="float" min="1e-8" max="1e10" _gui-text="Diameter/Angle:">5</param>
+            <param name="para2" type="float" min="1e-8" max="360" _gui-text="Diameter/Angle:">5</param>
 		</page>
 		<page name="desc" _gui-text="Help">
 			<_param name="measurehelp" type="description" xml:space="preserve">This extension is used to aid in the construction of D-Forms
