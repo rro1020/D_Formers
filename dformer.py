@@ -173,6 +173,9 @@ def findPointPairs(points):
     
     return pairs
 
+def check_relative_difference(val1, val2, tolerance=0.99):
+    return (min(val1,val2)/max(val1,val2)) >= tolerance
+ 
 def addStitching(path, n, offset, diameter, document): 
     points = generatePoints(path, n) 
     pointPairs = findPointPairs(points)
@@ -186,7 +189,11 @@ def addStitching(path, n, offset, diameter, document):
 def addNotches(path, n, offset, angle, document):
     points = generatePoints(path, 2 * n)
     pt_pairs = findPointPairs(points)
-    inkex.errormsg("pt_pairs = " + str(pt_pairs))
+    #inkex.errormsg("pt_pairs = " + str(pt_pairs))
+    
+    p = cubicsuperpath.parsePath(path.get('d'))[0]
+    i = 1
+    
     for a, b in pt_pairs:
         slope = computeSlope(a, b)
         p_slope = perpendicularSlope(slope)
@@ -199,34 +206,72 @@ def addNotches(path, n, offset, angle, document):
         
         c = computePointAlongLine(ac_slope, a, -dist)
         d = computePointAlongLine(bd_slope, b, -dist)
+        #inkex.errormsg("a = " + str(cubicsuperpath.parsePath('m 1,2C 3,4 5,6 7,8L 9,10L11,12L13,14C15,16 17,18 19,20')[0]) + "\n")
+        #raise Exception('IGNORE ME!!!')
+        #inkex.errormsg("before i = " + str(i) + "\n")
+        start_pt = p[i - 1][1]
         
-        line_ac = inkex.etree.Element(inkex.addNS('line', 'svg'))
-        line_ac.set('x1', str(a[0]))
-        line_ac.set('y1', str(a[1]))
-        line_ac.set('x2', str(c[0]))
-        line_ac.set('y2', str(c[1]))
-        line_ac.set('stroke', 'red')
+        while not(check_relative_difference(start_pt[0], a[0]) and check_relative_difference(start_pt[1], a[1])):
+            #inkex.errormsg("rejected: a = " + str(list(a)) + " " + str(start_pt) + "\n")
+            #inkex.errormsg("rejected: b = " + str(list(b)) + " " + str(end_pt) + "\n")
+            i += 1
+            start_pt = p[i - 1][1]
+        begin_idx = i
+        end_pt = p[i][1]
+        while not(check_relative_difference(end_pt[0], b[0]) and check_relative_difference(end_pt[1], b[1])):
+            i += 1
+            end_pt = p[i][1]
+        end_idx = i
         
-        line_cd = inkex.etree.Element(inkex.addNS('line', 'svg'))
-        line_cd.set('x1', str(c[0]))
-        line_cd.set('y1', str(c[1]))
-        line_cd.set('x2', str(d[0]))
-        line_cd.set('y2', str(d[1]))
-        line_cd.set('stroke', 'red')
+        before = p[:begin_idx]
+        after = p[end_idx:]
         
-        line_db = inkex.etree.Element(inkex.addNS('line', 'svg'))
-        line_db.set('x1', str(d[0]))
-        line_db.set('y1', str(d[1]))
-        line_db.set('x2', str(b[0]))
-        line_db.set('y2', str(b[1]))
-        line_db.set('stroke', 'red')
+        before[-1][1] = list(a)
+        before[-1][2] = list(a)
+        line_to_c = [list(c)] * 3
+        line_to_d = [list(d)] * 3
+        line_to_b = [list(b)] * 3
+        after[0][0] = list(b)
         
-        document.append(line_ac)
-        document.append(line_cd)
-        document.append(line_db)
+        p = before + [line_to_c] + [line_to_d] + [line_to_b] + after
+        
+        #inkex.errormsg("final: a = " + str(list(a)) + " " + str(start_pt) + "\n")
+        #inkex.errormsg("final: b = " + str(list(b)) + " " + str(end_pt) + "\n")
+        
+       
+        
+        # line_ac = inkex.etree.Element(inkex.addNS('line', 'svg'))
+        # line_ac.set('x1', str(a[0]))
+        # line_ac.set('y1', str(a[1]))
+        # line_ac.set('x2', str(c[0]))
+        # line_ac.set('y2', str(c[1]))
+        # line_ac.set('stroke', 'red')
+        
+        # line_cd = inkex.etree.Element(inkex.addNS('line', 'svg'))
+        # line_cd.set('x1', str(c[0]))
+        # line_cd.set('y1', str(c[1]))
+        # line_cd.set('x2', str(d[0]))
+        # line_cd.set('y2', str(d[1]))
+        # line_cd.set('stroke', 'red')
+        
+        # line_db = inkex.etree.Element(inkex.addNS('line', 'svg'))
+        # line_db.set('x1', str(d[0]))
+        # line_db.set('y1', str(d[1]))
+        # line_db.set('x2', str(b[0]))
+        # line_db.set('y2', str(b[1]))
+        # line_db.set('stroke', 'red')
+        
+        # layer = inkex.etree.SubElement(document, 'g')
+        # layer.set(inkex.addNS('label','inkscape'), 'New Layer')
+        
+        # layer.append(line_ac)
+        # layer.append(line_cd)
+        # layer.append(line_db)
+        
+        # document.append(layer)
         
         #replaceSegmentWith(path.get('d'), a, b, '')
-        
+    path.set('d', cubicsuperpath.formatPath([p]))
     
 def read_stored_info(type, obj):
     if type == 'pathlength':
@@ -254,18 +299,18 @@ def generatePoints(obj, n):
     i = 0
     count = 0
     total = 0
-    inkex.errormsg("Len(segments) = " + str(len(segments)))
+    #inkex.errormsg("Len(segments) = " + str(len(segments)))
     
     while i < len(segments) - 1: 
-        inkex.errormsg("Target Distance = " + str(targetDist) + "  " + str(i))
-        inkex.errormsg(str(len(segments)) + " " + str(len(segmentLengths)))
-        inkex.errormsg("segmentLengths = " + str(segmentLengths))
+        #inkex.errormsg("Target Distance = " + str(targetDist) + "  " + str(i))
+        #inkex.errormsg(str(len(segments)) + " " + str(len(segmentLengths)))
+        #inkex.errormsg("segmentLengths = " + str(segmentLengths))
         #inkex.errormsg("Curve = " + str((segments[i - 1][1], segments[i - 1][2], segments[i][0], segments[i][1])))
         #inkex.errormsg("record length = " + str(segmentLengths[i]))
         #inkex.errormsg("measured length = " + str(bezmisc.bezierlength((segments[i - 1][1], segments[i - 1][2], segments[i][0], segments[i][1]),tolerance=0.00001)))
         if segmentLengths[i] == targetDist:
             pointList += [segments[i][1]]
-            inkex.errormsg("0.001 confirmed\n added point " + str(pointList[-1]))
+            #inkex.errormsg("0.001 confirmed\n added point " + str(pointList[-1]))
             targetDist = read_stored_info("pathlength", obj)/ n
             #raise Exception(str(pointList))
 
@@ -276,8 +321,8 @@ def generatePoints(obj, n):
         else:
             t = targetDist / float(segmentLengths[i]) 
             
-            inkex.errormsg("t = " + str(t))
-            inkex.errormsg("targetPt = " + str(bezmisc.bezierpointatt((segments[i - 1][1], segments[i - 1][2], segments[i][0], segments[i][1]),t)))
+            #inkex.errormsg("t = " + str(t))
+            #inkex.errormsg("targetPt = " + str(bezmisc.bezierpointatt((segments[i - 1][1], segments[i - 1][2], segments[i][0], segments[i][1]),t)))
              
             t1 = segments[i-1][1]
             t2 = segments[i][1]
@@ -285,7 +330,7 @@ def generatePoints(obj, n):
             #sub1, sub2 = bezmisc.beziersplitatt((segments[i-1][-2], segments[i-1][-1], segments[i][0], segments[i][1]), t)
             pathList = addnodes.cspbezsplitatlength(segments[i-1], segments[i], t,tolerance=0.00001)
             pointList += [pathList[1][1]]
-            inkex.errormsg("added point " + str(pointList[-1]))
+            #inkex.errormsg("added point " + str(pointList[-1]))
             prev = segments[:i - 1]
             next = segments[i + 1:]
             segments = prev + pathList + next
@@ -301,12 +346,12 @@ def generatePoints(obj, n):
                 raise Exception("There is an issue with the bezier split function. (" + str(len1 + len2) + " vs. " + str(segmentLengths[i]) + ")")
                 
             
-            inkex.errormsg("Split Point = " + str(pointList[-1]))
-            inkex.errormsg("len1 = " + str(len1) + "\nlen2 = " + str(len2) + " \nsegmentLengths[i] = " + str(segmentLengths[i]))
+            #inkex.errormsg("Split Point = " + str(pointList[-1]))
+            #inkex.errormsg("len1 = " + str(len1) + "\nlen2 = " + str(len2) + " \nsegmentLengths[i] = " + str(segmentLengths[i]))
             
             prev = segmentLengths[:i]
             next = segmentLengths[i+1:]
-            inkex.errormsg("Pathlist = " + str(pathList))
+            #inkex.errormsg("Pathlist = " + str(pathList))
             segmentLengths = prev + [len1, len2] + next
         
             #obj.set('d', cubicsuperpath.formatPath([segments]))
@@ -314,25 +359,26 @@ def generatePoints(obj, n):
             targetDist = read_stored_info("pathlength", obj)/n
             
             
-            inkex.errormsg("prev = " + str(prev))
-            inkex.errormsg("next = " + str(next))
-            inkex.errormsg("SegmentLengths[\n" + str(segmentLengths) + "\n]")
-            inkex.errormsg('\n\n')
+            #inkex.errormsg("prev = " + str(prev))
+            #inkex.errormsg("next = " + str(next))
+            #inkex.errormsg("SegmentLengths[\n" + str(segmentLengths) + "\n]")
+            #inkex.errormsg('\n\n')
             count += 1
         i += 1
     
     pointList += [segments[0][1]]
     
     if abs(sum(segmentLengths) - read_stored_info("pathlength", obj)) >= 0.001:
-        inkex.errormsg(str(sum(segmentLengths) - read_stored_info("pathlength", obj)))
+        #inkex.errormsg(str(sum(segmentLengths) - read_stored_info("pathlength", obj)))
         raise Exception("Internal Error: The total length of the new path does not equal the original path.")
     #raise Exception(str(segments)+ "\n\n" + str(new_path))
     #raise Exception(pointList)
-    inkex.errormsg(str(pointList))
-    obj.set('d', cubicsuperpath.formatPath([segments[:-1]]) + 'Z')
-    inkex.errormsg("segmentLengths = " + str(len(segmentLengths)))
-    inkex.errormsg(str(len(segments)))
-    inkex.errormsg(str(count))
+    #inkex.errormsg(str(pointList))
+    #raise Exception(cubicsuperpath.formatPath([segments[:-1]]))
+    obj.set('d', cubicsuperpath.formatPath([segments[:-1]]))
+    #inkex.errormsg("segmentLengths = " + str(len(segmentLengths)))
+    #inkex.errormsg(str(len(segments)))
+    #inkex.errormsg(str(count))
     
     #if len(pointList) != n:
     #    raise Exception("Internal Error: The algorithm did not find the required number of points (" + str(len(pointList)) + " out of " + str(n) + ").")
@@ -588,9 +634,11 @@ class Length(inkex.Effect):
         elif self.options.tab == "\"tooth\"":
             addNotches(obj_nodes[id_min], self.options.points, self.options.offset, self.options.paraTooth,doc)
             printValue(self.options.tab, self)
+            addNotches(obj_nodes[id_max], self.options.points, self.options.offset, self.options.paraTooth,doc)
+            printValue(self.options.tab, self)
         
-        inkex.errormsg(str(points))
-        inkex.errormsg(str(len(points)))
+        #inkex.errormsg(str(points))
+        #inkex.errormsg(str(len(points)))
         
         #buildType Radio Button Here
         
