@@ -44,6 +44,7 @@ import math
 
 from simpletransform import fuseTransform 
 from simplepath import parsePath, formatPath
+from simplestyle import *
 
 inkex.localize()
 locale.setlocale(locale.LC_ALL, '')
@@ -409,7 +410,7 @@ def originParse(pathTarget):
     yf = float(yString)
 
     return [xf,yf]    
-    
+   
 class Length(inkex.Effect):
     def __init__(self):
         inkex.Effect.__init__(self)
@@ -433,11 +434,21 @@ class Length(inkex.Effect):
                         dest="offset", default=5,
                         help="Offset")
                         
-        self.OptionParser.add_option("-a", "--para2",
+        self.OptionParser.add_option("-x", "--paraStitch",
                         action="store", type="float", 
-                        dest="para2", default=5,
+                        dest="paraStitch", default=5,
                         help="Scale Factor (Drawing:Real Length)")
 
+        self.OptionParser.add_option("-y", "--paraTooth",
+                        action="store", type="float", 
+                        dest="paraTooth", default=5,
+                        help="Scale Factor (Drawing:Real Length)")
+                        
+        self.OptionParser.add_option("-z", "--paraLeaf",
+                        action="store", type="float", 
+                        dest="paraLeaf", default=5,
+                        help="Scale Factor (Drawing:Real Length)")
+                        
         self.OptionParser.add_option("-r", "--radioScale",
                         action="store", type="string", 
                         dest="radioScale", default="B2S",
@@ -450,7 +461,7 @@ class Length(inkex.Effect):
                         
         self.OptionParser.add_option("--tab",
                         action="store", type="string", 
-                        dest="tab", default="sampling",
+                        dest="tab", default="desc",
                         help="The selected UI-tab when OK was pressed")
                         
         self.OptionParser.add_option("--measurehelp",
@@ -530,7 +541,7 @@ class Length(inkex.Effect):
             fuseTransform(obj_nodes[id_min])
             
             obj_ori = originParse(obj_nodes[id_min])
-            #drawCircle(obj_ori, self.options.para2, doc)
+            #drawCircle(obj_ori, self.options.paraStitch, doc)
             ori_trans = [(minOrigin[0] - obj_ori[0]), (minOrigin[1] - obj_ori[1])]
             obj_nodes[id_min].set('transform', 'translate(' + str(ori_trans[0]) + ' ' + str(ori_trans[1]) +')')
             fuseTransform(obj_nodes[id_min])
@@ -567,12 +578,16 @@ class Length(inkex.Effect):
         points = []
         #points = generatePoints(obj_nodes[id_min], self.options.points)
         #points = generatePoints(obj_nodes[id_max], self.options.points)
-        #addNotches(obj_nodes[id_min], self.options.points, self.options.offset, self.options.para2,doc)
+        #addNotches(obj_nodes[id_min], self.options.points, self.options.offset, self.options.paraTooth,doc)
         
-        if self.options.radioBuild == "stitch": 
-            addStitching(obj_nodes[id_min], self.options.points, self.options.offset, self.options.para2, doc) 
-        elif self.options.radioBuild == "teeth": 
-            addNotches(obj_nodes[id_min], self.options.points, self.options.offset, self.options.para2,doc)
+        printValue(self.options.tab, self)
+        
+        if self.options.tab == "\"stitch\"":
+            addStitching(obj_nodes[id_min], self.options.points, self.options.offset, self.options.paraStitch, doc) 
+            printValue(self.options.tab, self)
+        elif self.options.tab == "\"tooth\"":
+            addNotches(obj_nodes[id_min], self.options.points, self.options.offset, self.options.paraTooth,doc)
+            printValue(self.options.tab, self)
         
         inkex.errormsg(str(points))
         inkex.errormsg(str(len(points)))
