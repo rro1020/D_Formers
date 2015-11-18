@@ -173,7 +173,7 @@ def findPointPairs(points):
     
     return pairs
 
-def check_relative_difference(val1, val2, tolerance=0.99):
+def check_relative_difference(val1, val2, tolerance=0.9999):
     return (min(val1,val2)/max(val1,val2)) >= tolerance
  
 def addStitching(path, n, offset, diameter, document): 
@@ -224,14 +224,13 @@ def addNotches(path, n, offset, angle, document):
         end_idx = i
         
         before = p[:begin_idx]
-        after = p[end_idx:]
+        after = p[end_idx+1:]
         
         before[-1][1] = list(a)
         before[-1][2] = list(a)
         line_to_c = [list(c)] * 3
         line_to_d = [list(d)] * 3
         line_to_b = [list(b)] * 3
-        after[0][0] = list(b)
         
         p = before + [line_to_c] + [line_to_d] + [line_to_b] + after
         
@@ -271,7 +270,7 @@ def addNotches(path, n, offset, angle, document):
         # document.append(layer)
         
         #replaceSegmentWith(path.get('d'), a, b, '')
-    path.set('d', cubicsuperpath.formatPath([p]))
+    path.set('d', cubicsuperpath.formatPath([p]) + 'Z')
     
 def read_stored_info(type, obj):
     if type == 'pathlength':
