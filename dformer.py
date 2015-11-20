@@ -179,12 +179,37 @@ def check_relative_difference(val1, val2, tolerance=0.9999):
 def addStitching(path, n, offset, diameter, document): 
     points = generatePoints(path, n) 
     pointPairs = findPointPairs(points)
+    
+    # for p1, p2, p3, p4 in points: 
+        # #x, y = bezierslopeatt(((bx0,by0),(bx1,by1),(bx2,by2),(bx3,by3)), p) 
+        # x1, y1 = bezierslopeatt((p1, p2, p3, p4), p1) 
+        # x2, y2 = bezierslopeatt((p1, p2, p3, p4), p2)
+        # x3, y3 = bezierslopeatt((p1, p2, p3, p4), p3)
+        # x4, y4 = bezierslopeatt((p1, p2, p3, p4), p4)
+        
+        # newPoint1 = computePointAlongLine((x1, y1), p1, offset)
+        # newPoint2 = computePointAlongLine((x2, y2), p2, offset)
+        # newPoint3 = computePointAlongLine((x3, y3), p3, offset)
+        # newPoint4 = computePointAlongLine((x4, y4), p4, offset)
+        # drawCircle(newPoint1, diameter/2, document)
+        # drawCircle(newPoint2, diameter/2, document)
+        # drawCircle(newPoint3, diameter/2, document)
+        # drawCircle(newPoint4, diameter/2, document)
+    
     for p1, p2 in pointPairs:
         pSlope = perpendicularSlope(computeSlope(p1, p2)) 
         newPoint1 = computePointAlongLine(pSlope, p1, offset)
         newPoint2 = computePointAlongLine(pSlope, p2, offset)
         drawCircle(newPoint1, diameter/2, document)
         drawCircle(newPoint2, diameter/2, document)
+    
+    # Attempt to rescale path by offset 
+    # originalOrigin = originParse(path)
+    # path.set('transform', 'scale(' + str(offset) + ' ' + str(offset) +')')
+    # newOrigin = originParse(path)
+    # transformOrigin = [(originalOrigin[0] - newOrigin[0]), (originalOrigin[1] - newOrigin[1])]
+    # path.set('transform', 'translate(' + str(transformOrigin[0]) + ' ' + str(transformOrigin[1]) +')')
+    #useTransform(path)
     
 def addNotches(path, n, offset, angle, document):
     points = generatePoints(path, 2 * n)
@@ -625,16 +650,17 @@ class Length(inkex.Effect):
         #points = generatePoints(obj_nodes[id_max], self.options.points)
         #addNotches(obj_nodes[id_min], self.options.points, self.options.offset, self.options.paraTooth,doc)
         
-        printValue(self.options.tab, self)
+        #printValue(self.options.tab, self)
         
         if self.options.tab == "\"stitch\"":
-            addStitching(obj_nodes[id_min], self.options.points, self.options.offset, self.options.paraStitch, doc) 
-            printValue(self.options.tab, self)
+            addStitching(obj_nodes[id_min], self.options.points, self.options.offset, self.options.paraStitch, doc)
+            addStitching(obj_nodes[id_max], self.options.points, self.options.offset, self.options.paraStitch, doc)
+            #printValue(self.options.tab, self)
         elif self.options.tab == "\"tooth\"":
             addNotches(obj_nodes[id_min], self.options.points, self.options.offset, self.options.paraTooth,doc)
-            printValue(self.options.tab, self)
+            #printValue(self.options.tab, self)
             addNotches(obj_nodes[id_max], self.options.points, self.options.offset, self.options.paraTooth,doc)
-            printValue(self.options.tab, self)
+            #printValue(self.options.tab, self)
         
         #inkex.errormsg(str(points))
         #inkex.errormsg(str(len(points)))
