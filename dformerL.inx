@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<inkscape-extension xmlns="http://www.inkscape.org/namespace/inkscape/extension">
+	<_name>Leaf Fabricator</_name>
+	<id>com.njhurst.filter.dformerL</id>
+	<dependency type="executable" location="extensions">dformerL.py</dependency>
+	<dependency type="executable" location="extensions">inkex.py</dependency>
+	<param name="tab" type="notebook">
+		<page name="leaf" _gui-text="Leaves Method">
+            <_param name="argue" type="description" xml:space="preserve">Variable:</_param>
+            <param name="paraLeaf" type="float" min="1e-8" max="1e10" _gui-text="Mysterious Parameter:">0</param>
+            <param name="pointsL" type="int" min="1" max="100" _gui-text="Number of Connectors:">20</param>
+			<param name="offsetL" type="float" min="1e-8" max="1e10" _gui-text="Offset:">20</param>
+		</page>
+	</param>
+	<effect>
+		<object-type>path</object-type>
+		<effects-menu>
+			<submenu _name="D-Formers"/>
+		</effects-menu>
+	</effect>
+	<script>
+		<command reldir="extensions" interpreter="python">dformerL.py</command>
+	</script>
+</inkscape-extension>
