@@ -121,22 +121,44 @@ def rotateSlope((x, y), degrees):
     radians = math.radians(degrees)
     new_x = x * math.cos(radians) - y * math.sin(radians)
     new_y = x * math.sin(radians) + y * math.cos(radians)
-    return new_x, new_y
-
+    return new_x, new_y 
+    
 def computeSlope((x1, y1), (x2, y2)):
     return x2 - x1, y2 - y1
     
 def perpendicularSlope((dx, dy)):
     return -dy, dx
     
+def computeLineIntercept((x, y), slope): 
+    return y - slope * x 
+    
+def computeMidpointIntersection((x1, y1), (x2, y2), (dx1, dy1), (dx2, dy2)):
+    b1 = computeLineIntercept((x1, y1), (dy1/dx1))
+    b2 = computeLineIntercept((x2, y2), (dy2/dx2))
+    
+    x = (b1 - b2) / ((dy2/dx2) - (dy1/dx1)) 
+    y = (dy1/dx1) * x + b1
+    
+    return (x, y)
+    
 def computePointAlongLine((dx, dy), (x, y), distance):
     #compute unit vector
+    #inkex.errormsg("dx = " + str(dx) + "  dy = " + str(dy))
     norm = (dx ** 2 + dy ** 2) ** 0.5
-    u_x = dx / norm
-    u_y = dy / norm
     
-    new_x = x + distance * u_x
-    new_y = y + distance * u_y
+    #if slope is undefined, new point is the x_coord + distance  
+    new_x = 0 
+    new_y = 0 
+    if (norm == 0): 
+        #Subtraction only works for vertical slopes on the right side
+        new_x = x - distance 
+        new_y = y
+    else: 
+        u_x = dx / norm
+        u_y = dy / norm
+    
+        new_x = x + distance * u_x
+        new_y = y + distance * u_y
     
     return new_x, new_y
     
@@ -173,6 +195,32 @@ def findPointPairs(points):
     
     return pairs
 
+#Based off the Bounding Box Method 
+def getCenterPoint(points): 
+    px_min = points[0] 
+    px_max = points[1] 
+    py_min = points[0] 
+    py_max = points[1]
+    
+    for p in points: 
+        if p[0] < px_min[0]:
+            px_min = p 
+        elif p[0] > px_max[0]: 
+            px_max = p 
+
+        if p[1] < py_min[1]: 
+            py_min = p 
+        elif p[1] > py_max[1]:
+            py_max = p 
+        
+    x_slope = computeSlope(px_min, px_max) 
+    y_slope = computeSlope(py_min, py_max) 
+    
+    return computeMidpointIntersection(px_min, py_min, x_slope, y_slope)
+    
+    
+        
+    
 def check_relative_difference(val1, val2, tolerance=0.9999):
     return (min(val1,val2)/max(val1,val2)) >= tolerance
 
@@ -180,40 +228,81 @@ def check_relative_difference(val1, val2, tolerance=0.9999):
 # - report when edges overlap 
 # - report when offset size is greater than width of shape 
 # -     
+def rescalePath(path, n, offset, diameter, document): 
+    originalOrigin = originParse(path)
+    
+    perimeter = read_stored_info("pathlength", path)
+    path.set('transform', 'scale(' + str(1 + offset/100) + ' ' + str(1 + offset/100) +')')
+    fuseTransform(path) 
+    inkex.errormsg("orignalOrigin = " + str(originalOrigin))
+    
+    newPath = cubicsuperpath.parsePath(path.get('d'))
+    #inkex.errormsg("\nNew Path\n" + str(newPath))
+    newOrigin = originParse(path)
+    
+    #mat = simpletransform.composeParents(node, [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]])
+    #node.set('d', cubicsuperpath.formatPath(parsedPath))
+    #simpletransform.applyTransformToPath(mat, parsedPath)
+    
+    slengths, stotal = csplength(newPath)
+    #newPoints = generatePoints(newPath, n)
+    
+    
+    #slengths, stotal = csplength(newPath)
+    inkex.errormsg("slength\n" + str(slengths)) 
+    inkex.errormsg("\nstotal\n" + str(stotal)) 
+    #save the path length and segment lengths in the document 
+    path.set('pathlength', str(stotal))
+    tmp = ''
+    for slen in slengths[0][::-1]:
+        tmp += str(slen) + ' '
+    tmp = tmp[:-1] #remove the space at the end
+    path.set('segmentlengths', tmp)
+    
+    #LEFT OFF HERE 
+    # There seems to be a division by zero error :( 
+    
+    newPointList = generatePoints(path, n)
+    centerPoint = getCenterPoint(newPointList)
+    drawCircle(centerPoint, diameter/2, document)
+    
+    #inkex.errormsg("newOrigin = " + str(newOrigin))
+    transformOrigin = [(originalOrigin[0] - newOrigin[0] / (1 + offset/400)), (originalOrigin[1] - newOrigin[1])]
+    inkex.errormsg("transformOrigin = " + str(transformOrigin))
+    path.set('transform', 'translate(' + str(transformOrigin[0]) + ' ' + str(transformOrigin[1]) +')')
+    fuseTransform(path)
+
 def addStitching(path, n, offset, diameter, document): 
     points = generatePoints(path, n) 
     pointPairs = findPointPairs(points)
     
     parsedPath = cubicsuperpath.parsePath(path.get('d'))[0]
+    #inkex.errormsg("Parsed Path\n" + str(parsedPath))
     i = 1
     
-    for p in points: 
+    for p in points:   
         start_pt = parsedPath[i - 1][1]
         #inkex.errormsg("i = " + str(i)); 
         
         while not(check_relative_difference(start_pt[0], p[0]) and check_relative_difference(start_pt[1], p[1])):
             i += 1
             start_pt = parsedPath[i - 1][1]
-        #inkex.errormsg("2nd i = " + str(i));    
-        
+
         x, y = bezmisc.bezierslopeatt((parsedPath[i-1][1], parsedPath[i-1][2], parsedPath[i][0], parsedPath[i][1]), 0)
-        #pSlope = perpendicularSlope((x, y))  
-        #newPoint = computePointAlongLine(pSlope, p, offset)
+        pSlope = perpendicularSlope((x, y))  
+        newPoint = computePointAlongLine(pSlope, p, offset)
         drawCircle(p, diameter/2, document)
+        drawCircle(newPoint, diameter/2, document)
     
+    midPoint = getCenterPoint(points)
+    drawCircle(midPoint, diameter/2, document)
     
     # Attempt to rescale path by offset 
-    originalOrigin = originParse(path)
-    perimeter = read_stored_info("pathlength", path)
-    path.set('transform', 'scale(' + str(1 + offset/100) + ' ' + str(1 + offset/100) +')')
-    fuseTransform(path) 
-    inkex.errormsg("orignalOrigin = " + str(originalOrigin))
-    newOrigin = originParse(path)
-    inkex.errormsg("newOrigin = " + str(newOrigin))
-    transformOrigin = [(originalOrigin[0] - newOrigin[0]), (originalOrigin[1] - newOrigin[1])]
-    inkex.errormsg("transformOrigin = " + str(transformOrigin))
-    path.set('transform', 'translate(' + str(transformOrigin[0]) + ' ' + str(transformOrigin[1]) +')')
-    fuseTransform(path)
+    rescalePath(path, n, offset, diameter, document)
+        
+        
+        
+    
     
 def addNotches(path, n, offset, angle, document):
     points = generatePoints(path, 2 * n)
@@ -224,6 +313,7 @@ def addNotches(path, n, offset, angle, document):
     i = 1
     
     for a, b in pt_pairs:
+        inkex.errormsg("i = " + str(i))
         slope = computeSlope(a, b)
         p_slope = perpendicularSlope(slope)
         
@@ -235,23 +325,21 @@ def addNotches(path, n, offset, angle, document):
         
         c = computePointAlongLine(ac_slope, a, -dist)
         d = computePointAlongLine(bd_slope, b, -dist)
-        #inkex.errormsg("a = " + str(cubicsuperpath.parsePath('m 1,2C 3,4 5,6 7,8L 9,10L11,12L13,14C15,16 17,18 19,20')[0]) + "\n")
-        #raise Exception('IGNORE ME!!!')
-        #inkex.errormsg("before i = " + str(i) + "\n")
         start_pt = p[i - 1][1]
         
         while not(check_relative_difference(start_pt[0], a[0]) and check_relative_difference(start_pt[1], a[1])):
-            #inkex.errormsg("rejected: a = " + str(list(a)) + " " + str(start_pt) + "\n")
-            #inkex.errormsg("rejected: b = " + str(list(b)) + " " + str(end_pt) + "\n")
             i += 1
             start_pt = p[i - 1][1]
         begin_idx = i
+        #inkex.errormsg("i after startpt = " + str(i))
+        
         end_pt = p[i][1]
         while not(check_relative_difference(end_pt[0], b[0]) and check_relative_difference(end_pt[1], b[1])):
             i += 1
             end_pt = p[i][1]
         end_idx = i
         
+        #inkex.errormsg("i after endpt = " + str(i))
         before = p[:begin_idx]
         after = p[end_idx+1:]
         
@@ -263,40 +351,6 @@ def addNotches(path, n, offset, angle, document):
         
         p = before + [line_to_c] + [line_to_d] + [line_to_b] + after
         
-        #inkex.errormsg("final: a = " + str(list(a)) + " " + str(start_pt) + "\n")
-        #inkex.errormsg("final: b = " + str(list(b)) + " " + str(end_pt) + "\n")
-        
-       
-        
-        # line_ac = inkex.etree.Element(inkex.addNS('line', 'svg'))
-        # line_ac.set('x1', str(a[0]))
-        # line_ac.set('y1', str(a[1]))
-        # line_ac.set('x2', str(c[0]))
-        # line_ac.set('y2', str(c[1]))
-        # line_ac.set('stroke', 'red')
-        
-        # line_cd = inkex.etree.Element(inkex.addNS('line', 'svg'))
-        # line_cd.set('x1', str(c[0]))
-        # line_cd.set('y1', str(c[1]))
-        # line_cd.set('x2', str(d[0]))
-        # line_cd.set('y2', str(d[1]))
-        # line_cd.set('stroke', 'red')
-        
-        # line_db = inkex.etree.Element(inkex.addNS('line', 'svg'))
-        # line_db.set('x1', str(d[0]))
-        # line_db.set('y1', str(d[1]))
-        # line_db.set('x2', str(b[0]))
-        # line_db.set('y2', str(b[1]))
-        # line_db.set('stroke', 'red')
-        
-        # layer = inkex.etree.SubElement(document, 'g')
-        # layer.set(inkex.addNS('label','inkscape'), 'New Layer')
-        
-        # layer.append(line_ac)
-        # layer.append(line_cd)
-        # layer.append(line_db)
-        
-        # document.append(layer)
         
         #replaceSegmentWith(path.get('d'), a, b, '')
     path.set('d', cubicsuperpath.formatPath([p]))
@@ -311,7 +365,6 @@ def read_stored_info(type, obj):
         return tmp
     return None
 
-# generate points but points are not correct!     
 def generatePoints(obj, n):
     pointList = []  
     targetDist = read_stored_info("pathlength", obj)/ n 
@@ -330,7 +383,7 @@ def generatePoints(obj, n):
     #inkex.errormsg("Len(segments) = " + str(len(segments)))
     
     while i < len(segments) - 1: 
-        #inkex.errormsg("Target Distance = " + str(targetDist) + "  " + str(i))
+        #inkex.errormsg("i = " + str(i))
         #inkex.errormsg(str(len(segments)) + " " + str(len(segmentLengths)))
         #inkex.errormsg("segmentLengths = " + str(segmentLengths))
         #inkex.errormsg("Curve = " + str((segments[i - 1][1], segments[i - 1][2], segments[i][0], segments[i][1])))
@@ -387,10 +440,6 @@ def generatePoints(obj, n):
             targetDist = read_stored_info("pathlength", obj)/n
             
             
-            #inkex.errormsg("prev = " + str(prev))
-            #inkex.errormsg("next = " + str(next))
-            #inkex.errormsg("SegmentLengths[\n" + str(segmentLengths) + "\n]")
-            #inkex.errormsg('\n\n')
             count += 1
         i += 1
     
@@ -399,14 +448,8 @@ def generatePoints(obj, n):
     if abs(sum(segmentLengths) - read_stored_info("pathlength", obj)) >= 0.001:
         #inkex.errormsg(str(sum(segmentLengths) - read_stored_info("pathlength", obj)))
         raise Exception("Internal Error: The total length of the new path does not equal the original path.")
-    #raise Exception(str(segments)+ "\n\n" + str(new_path))
-    #raise Exception(pointList)
-    #inkex.errormsg(str(pointList))
-    #raise Exception(cubicsuperpath.formatPath([segments[:-1]]))
     obj.set('d', cubicsuperpath.formatPath([segments[:-1]])+'Z')
-    #inkex.errormsg("segmentLengths = " + str(len(segmentLengths)))
-    #inkex.errormsg(str(len(segments)))
-    #inkex.errormsg(str(count))
+    obj.set('segmentlengths', str(segmentLengths))
     
     #if len(pointList) != n:
     #    raise Exception("Internal Error: The algorithm did not find the required number of points (" + str(len(pointList)) + " out of " + str(n) + ").")
@@ -415,7 +458,6 @@ def generatePoints(obj, n):
     
 def drawCircle(tarPoint, radius, doc):
 #draws a circle at a point
-    
     circ = inkex.etree.Element(inkex.addNS('circle', 'svg'))
     circ.set('cx', str(tarPoint[0]))
     circ.set('cy', str(tarPoint[1]))
@@ -555,6 +597,7 @@ class Length(inkex.Effect):
             if self.unittouu(doc.get('height'))/float(viewh) < factor:
                 factor = self.unittouu(doc.get('height'))/float(viewh)
             factor /= self.unittouu('1px')
+        
         # loop over all selected paths
         obj_lengths = []  
         obj_ids = []
@@ -581,8 +624,6 @@ class Length(inkex.Effect):
                     obj_lengths += [stotal]
                     obj_ids += [id]
                     obj_nodes += [node] 
-                # Format the length as string
-                # lenstr = locale.format("%(len)25."+str(prec)+"f",{'len':round(stotal*factor*self.options.scale,prec)}).strip()
         
         id_min = 0
         id_max = 1
@@ -599,13 +640,20 @@ class Length(inkex.Effect):
             ratio = obj_lengths[id_min] / obj_lengths[id_max]
             obj_ori = []
             ori_trans = []      
-            obj_nodes[id_max].set('transform', 'scale(' + str(ratio) + ' ' + str(ratio) +')')
+            #obj_nodes[id_max].set('transform', 'scale(' + str(ratio * 2) + ' ' + str(ratio * 2) +')')
+            obj_nodes[id_max].set('transform', 'scale(' + str(ratio) + ' ' + str(ratio) +')')      
+            #obj_nodes[id_min].set('transform', 'scale(' + str(2) + ' ' + str(2) +')')      
             fuseTransform(obj_nodes[id_max])
+            #fuseTransform(obj_nodes[id_min])
             
             obj_ori = originParse(obj_nodes[id_max])
             ori_trans = [(maxOrigin[0] - obj_ori[0]), (maxOrigin[1] - obj_ori[1])]
             obj_nodes[id_max].set('transform', 'translate(' + str(ori_trans[0]) + ' ' + str(ori_trans[1]) +')')
+            # obj_ori = originParse(obj_nodes[id_min])
+            # ori_trans = [(minOrigin[0] - obj_ori[0]), (minOrigin[1] - obj_ori[1])]
+            # obj_nodes[id_min].set('transform', 'translate(' + str(ori_trans[0]) + ' ' + str(ori_trans[1]) +')')
             fuseTransform(obj_nodes[id_max])
+            #fuseTransform(obj_nodes[id_min])
             
         elif self.options.radioScale == "S2B":
             ratio = obj_lengths[id_max] / obj_lengths[id_min]
@@ -615,7 +663,6 @@ class Length(inkex.Effect):
             fuseTransform(obj_nodes[id_min])
             
             obj_ori = originParse(obj_nodes[id_min])
-            #drawCircle(obj_ori, self.options.paraStitch, doc)
             ori_trans = [(minOrigin[0] - obj_ori[0]), (minOrigin[1] - obj_ori[1])]
             obj_nodes[id_min].set('transform', 'translate(' + str(ori_trans[0]) + ' ' + str(ori_trans[1]) +')')
             fuseTransform(obj_nodes[id_min])
