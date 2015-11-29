@@ -14,7 +14,7 @@ function setUpUI()
 {
     var ui = new Window("dialog", "Normalize Path Perimeters");
     
-    var scaleOpt = ui.add('group', undefined, "Normalize all path to:");
+    var scaleOpt = ui.add('group', undefined, "Normalize all paths to:");
     scaleOpt.orientation = 'column'
     var btnSL = scaleOpt.add('radiobutton', undefined, 'Largest path length');
     var btnLS = scaleOpt.add('radiobutton', undefined, 'Smallest path length');
@@ -31,8 +31,6 @@ function setUpUI()
     }
     ui.show();
 }
-
-
 
 if(app.documents.length > 0)
 {

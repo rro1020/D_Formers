@@ -149,18 +149,7 @@ function perpendicularSlope(slope)
 {
     return [(-slope[1]), (slope[0])];
 }
-
-function rotateSlope(pts, degrees)
-{
-    var degrees = degrees % 360;
-    var radians = degrees * (Math.PI / 180);
-    
-    var new_x = pts[0] * Math.cos(radians) - pts[1] * Math.sin(radians);
-    var new_y = pts[0] * Math.sin(radians) + pts[1] * Math.cos(radians);
-
-    return [new_x, new_y];
-}
-    
+ 
 function findPointPairs(pts)
 {
     var pairs = [];
@@ -192,90 +181,59 @@ function check_relative_difference(val1, val2, tolerance)
 {
     return ((Math.min(val1, val2) / Math.max(val1, val2)) >= tolerance);
 }
-    
-function add_notches(p, n, o, angle, slide, invert)
+
+function derivative_bcurve(start, ctrl1, ctrl2, end, t)
 {
-    tmp = generate_points(p, n * 2, slide);
+    var d_x = ctr1[0] + 2 * ctrl2[0] * t + 3 * end[0] * t * t;
+    var d_y = ctr1[1] + 2 * ctrl2[1] * t + 3 * end[1] * t * t;
     
-    p = tmp[0];
+    return [d_x, d_y];
+}
+    
+function add_stiches(p, n, o, diameter, slide, invert)
+{
+    tmp = generate_points(p, n, slide);
+    
+    //p = tmp[0];
     pts = tmp[1];
     //alert("found pts = " + pts.length);
-    pair_pts = findPointPairs(pts);
     
-    //alert("pair lengths = " + pair_pts.length);
-    
-    var j = 0;
-    
-    for(var i = 0; i < pair_pts.length; i++)
+    for(var i = 0; i < pts.length; i++)
     {
-        //break;
-        var a = pair_pts[i][0];
-        var b = pair_pts[i][1];
-        
-        var slope = computeSlope(a, b);
-        var p_slope = perpendicularSlope(slope);
+        var top = pts[i][0][1] + (diameter/2);
+        var left = pts[i][0][0] - (diameter/2);
 
-        var ac_slope = rotateSlope(p_slope, 360 - angle);
-        var bd_slope = rotateSlope(p_slope, angle);
-        
-        var tmp = o * Math.tan(angle * (Math.PI / 180));
-        var dist = Math.sqrt(tmp * tmp + o * o);
-        
-        //alert("dist = " + dist);
-        
-        var polarity = 1;
-        
-        if(invert)
+        app.activeDocument.pathItems.ellipse(top, left, diameter, diameter);
+    }
+    
+    if(!invert)
         {
-            polarity = -1;
+            o = -1 * o;
         }
+    
+    for(var j = 0; j < p.length; j++)
+    {
+        var dx_r = p[j][2][0] - p[j][0][0];
+        var dy_r = p[j][2][1] - p[j][0][1];
+
+        var dx_l = p[j][1][0] - p[j][0][0];
+        var dy_l = p[j][1][1] - p[j][0][1];
         
-        dist = dist * polarity;
+        var op_dx_r = -1 * dx_r;
+        var op_dy_r = -1 * dy_r;
         
-        var c = computePointAlongLine(ac_slope, a, dist);
-        var d = computePointAlongLine(bd_slope, b, dist);
+        var unit_vec_a = [(dx_l/(Math.sqrt(dx_l * dx_l + dy_l * dy_l))), (dy_l/(Math.sqrt(dx_l * dx_l + dy_l * dy_l)))];
+        var unit_vec_b = [(op_dx_r/(Math.sqrt(op_dx_r * op_dx_r + op_dy_r * op_dy_r))), (op_dy_r/(Math.sqrt(op_dx_r * op_dx_r + op_dy_r * op_dy_r)))];
         
-        var start_pt = p[j];
-        //alert("j = " + j + " " + start_pt);
-        while(start_pt[0] != a[0])
-            {
-                j += 1;
-                //alert("-j = " + j);
-                start_pt = p[j];
-            }
-            
-        var begin_idx = j;
+        var tangent = [(unit_vec_a[0] + unit_vec_b[0])/2, (unit_vec_a[1] + unit_vec_b[1])/2];
         
-        var end_pt = p[j];
+        var p_slope = perpendicularSlope(tangent);
         
-        while(end_pt[0] != b[0])
-            {
-                j += 1;
-                end_pt = p[j];
-            }
-            
-        var end_idx = j;
-        //alert("len = " + p.length);
-        var before = p.splice(0, begin_idx + 1);
-        var e = end_idx - begin_idx - 1;
-        var after = p.splice(e, p.length);
+        var new_pt = computePointAlongLine(p_slope, p[j], o);
         
-        before[before.length - 1][2] = a[0];
-        
-        var pt_c = [c, c, c, PointType.SMOOTH];
-        var pt_d = [d, d, d, PointType.SMOOTH];
-        
-        after[0][1] = b[0];
-        
-        //alert("c = " + pt_c);
-        
-        before.push.apply(before, [pt_c]);
-        before.push.apply(before, [pt_d]);
-        before.push.apply(before, after);
-        
-        p = before
-        
-        //alert("len1 = " + p.length);
+        p[j][0] = new_pt;
+        p[j][1] = [new_pt[0] + dx_l, new_pt[1] + dy_l];
+        p[j][2] = [new_pt[0] + dx_r, new_pt[1] + dy_r];
     }
     
     return p;
@@ -329,22 +287,22 @@ if(app.documents.length > 0)
                 invert = true;
             }
             
-            setUpUI();
+            //setUpUI();
             
-            var num_nodes = 100;
+            var num_nodes = 20;
             var node_length = 20;
-            var angle = 0;
+            var diameter = 10;
             var slide = 0;
             var input = false;
             
-            alert(selected_paths[j].name);
+            //alert(selected_paths[j].name);
             
             if(input)
             {
                 invert = !invert;
             }
             
-            p = add_notches(p, num_nodes, node_length, angle, slide, invert);
+            p = add_stiches(p, num_nodes, node_length, diameter, slide, invert);
             
             unparse_path(selected_paths[j], p);
         }
