@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<inkscape-extension xmlns="http://www.inkscape.org/namespace/inkscape/extension">
+	<_name>Tooth Fabrication</_name>
+	<id>com.njhurst.filter.dformerT</id>
+	<dependency type="executable" location="extensions">dformerT.py</dependency>
+	<dependency type="executable" location="extensions">inkex.py</dependency>
+	<param name="tab" type="notebook">
+        <page name="tooth" _gui-text="Teeth Method">
+            <_param name="argue" type="description" xml:space="preserve">Variables:</_param>
+            <param name="paraTooth" type="float" min="1e-8" max="360" _gui-text="Angle:">0</param>
+            <param name="pointsT" type="int" min="1" max="100" _gui-text="Number of Connectors:">20</param>
+			<param name="offsetT" type="float" min="1e-8" max="1e10" _gui-text="Offset:">20</param>
+        </page>
+	</param>
+	<effect>
+		<object-type>path</object-type>
+		<effects-menu>
+			<submenu _name="D-Formers"/>
+		</effects-menu>
+	</effect>
+	<script>
+		<command reldir="extensions" interpreter="python">dformerT.py</command>
+	</script>
+</inkscape-extension>

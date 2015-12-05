@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<inkscape-extension xmlns="http://www.inkscape.org/namespace/inkscape/extension">
+	<_name>D-Former</_name>
+	<id>com.njhurst.filter.dformer</id>
+	<dependency type="executable" location="extensions">dformer.py</dependency>
+	<dependency type="executable" location="extensions">inkex.py</dependency>
+	<param name="tab" type="notebook">
+        <page name="dform" _gui-text="D-Form">
+            <param name="radioScale" type="optiongroup" _gui-text="Scaling Type:">
+				<option value="B2S">Big to Small</option>
+				<option value="S2B">Small to Big</option>
+			</param>
+            <_param name="argue" type="description" xml:space="preserve">Arguments:</_param>
+			<param name="points" type="int" min="1" max="100" _gui-text="Number of Connectors:">20</param>
+			<param name="offset" type="float" min="1e-8" max="1e10" _gui-text="Offset:">20</param>
+			<param name="unit" type="enum" _gui-text="Length Unit:">
+				<item value="px">px</item>
+				<item value="pt">pt</item>
+				<item value="in">in</item>
+				<item value="ft">ft</item>
+				<item value="yd">yd</item>
+				<item value="mm">mm</item>
+				<item value="cm">cm</item>
+				<item value="m">m</item>
+				<item value="km">km</item>
+			</param>
+        </page>
+        <page name="stitch" _gui-text="Stitch Method">
+            <_param name="argue" type="description" xml:space="preserve">Variable:</_param>
+			<param name="paraStitch" type="float" min="1e-8" max="1e10" _gui-text="Diameter:">10</param>
+		</page>
+		<page name="tooth" _gui-text="Teeth Method">
+            <_param name="argue" type="description" xml:space="preserve">Variable:</_param>
+            <param name="paraTooth" type="float" min="1e-8" max="360" _gui-text="Angle:">0</param>
+        </page>
+		<page name="leaf" _gui-text="Leaves Method">
+            <_param name="argue" type="description" xml:space="preserve">Variable:</_param>
+            <param name="paraLeaf" type="float" min="1e-8" max="1e10" _gui-text="Mysterious Parameter:">0</param>
+		</page>
+		<page name="desc" _gui-text="Help">
+			<_param name="measurehelp" type="description" xml:space="preserve">REWRITE THIS!
+            This extension is used to aid in the construction of D-Forms
+
+  * It takes 2 shapes and equalizes their perimeters, ensuring that they are able to be used in the creation of a D-Form
+  * The Scaling Radio Button is used to determine if the larger shape will resize to the smaller or if the opposite will happen
+  * The Build Types Radio Button controls which method of D-Form construction will be supported
+    * The None Type resizes the shapes and generates the points and that s all
+    * The Stitch Type generates holes, of a size specificed by the Diameter/Angle field, around the path, each offset from a generated point
+    * The Teeth Type generates teeth that stick out of the path, each tooth offset tangentially from a pair of points.  The Diameter/Angle field makes the lines of the teeth lean out, broadening the teeth
+    * The Leaves Type
+    * The Hinge Type
+  * The Number of Connectors field controls how many points are generated along the paths, as well as affecting how numerous the various Build Type connections are
+  * The Offset field controls how far from the perimeter path the various connections generate
+  * The Unit Drop Box controls the units of measure the other Arguments measure by
+  * The Diameter/Angle field is a secondary parameter that changes based on build type, specifying the radius or angle used by them  </_param>
+		</page>
+		<page name = "dformtestpage" _gui-text="D-Form Help">
+			<_param name="dformhelp" type="description" xml:space="preserve">DFORM Testing! This is a test page!  
+            Explain D-Forms here? </_param> 
+		</page> 
+	</param>
+	<effect>
+		<object-type>path</object-type>
+		<effects-menu>
+			<submenu _name="D-Formers"/>
+		</effects-menu>
+	</effect>
+	<script>
+		<command reldir="extensions" interpreter="python">dformer.py</command>
+	</script>
+</inkscape-extension>

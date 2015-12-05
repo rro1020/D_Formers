@@ -40,8 +40,7 @@ import simpletransform
 import cubicsuperpath
 import bezmisc
 import addnodes
-import math 
-import dformer
+import math
 
 from simpletransform import fuseTransform 
 from simplepath import parsePath, formatPath
@@ -100,51 +99,151 @@ def csplength(csp):
             lengths[-1].append(l)
             total += l
     return lengths, total
+
+#Defined Functions 
+def verifyDocument(document):
+    document.set('width', '18in')
+    document.set('height', '32in')
     
-def addNotches(path, n, offset, angle, document):
-    points = dformer.generatePoints(path, 2 * n)
-    pt_pairs = dformer.findPointPairs(points)
-    #inkex.errormsg("pt_pairs = " + str(len(pt_pairs)))
+    margin = inkex.etree.Element(inkex.addNS('rect', 'svg'))
+    margin.set('y', '14.940762')
+    margin.set('x', '-301.96371')
+    margin.set('width', '1022.4807')
+    margin.set('height', '1840.9845')
+    margin.set('stroke', 'red')
+    margin.set('stroke-width', '1')
+    margin.set('fill', 'none')
     
-    p = cubicsuperpath.parsePath(path.get('d'))[0]
+    document.append(margin)
+
+def rotateSlope((x, y), degrees):
+    degrees = degrees % 360
+    radians = math.radians(degrees)
+    new_x = x * math.cos(radians) - y * math.sin(radians)
+    new_y = x * math.sin(radians) + y * math.cos(radians)
+    return new_x, new_y
+
+def computeSlope((x1, y1), (x2, y2)):
+    return x2 - x1, y2 - y1
+    
+def perpendicularSlope((dx, dy)):
+    return -dy, dx
+    
+def computePointAlongLine((dx, dy), (x, y), distance):
+    #compute unit vector
+    norm = (dx ** 2 + dy ** 2) ** 0.5
+    u_x = dx / norm
+    u_y = dy / norm
+    
+    new_x = x + distance * u_x
+    new_y = y + distance * u_y
+    
+    return new_x, new_y
+    
+def replaceSegmentWith(path, start, end, subpath):
+    new_path = ""
+    
+    split_path = path.replace("L", "C").split("C")
+    
+    curves = split_path[1:]
+    new_path += split_path[0] + curves[0]
     i = 1
+    while i < len(curves):
+        points = curves[i - 1].split()
+        inkex.errormsg(str(start) + " " + str(end) + " " + curves[i] + '\n')
+        if start == (float(points[-2]), float(points[-1])):
+            points = curves[i].split()
+            while end != (points[-2], points[-1]):
+                i += 1
+                points = curves[i].split()
+            new_path += subpath
+        else:
+            new_path += "C" + curves[i]
+        
+        i += 1
     
-    for a, b in pt_pairs:
-        slope = dformer.computeSlope(a, b)
-        p_slope = dformer.perpendicularSlope(slope)
-        
-        ac_slope = dformer.rotateSlope(p_slope, 360 - angle)
-        bd_slope = dformer.rotateSlope(p_slope, angle)
-        
-        tmp = offset * math.tan(math.radians(angle))
-        dist = math.sqrt(tmp ** 2 + offset ** 2)
-        
-        c = dformer.computePointAlongLine(ac_slope, a, -dist)
-        d = dformer.computePointAlongLine(bd_slope, b, -dist)
-        start_pt = p[i - 1][1]
-        
-        while not(dformer.checkRelativeDifference(start_pt[0], a[0]) and dformer.checkRelativeDifference(start_pt[1], a[1])):
-            i += 1
-            start_pt = p[i - 1][1]
-        begin_idx = i
-        end_pt = p[i][1]
-        while not(dformer.checkRelativeDifference(end_pt[0], b[0]) and dformer.checkRelativeDifference(end_pt[1], b[1])):
-            i += 1
-            end_pt = p[i][1]
-        end_idx = i
-        
-        before = p[:begin_idx]
-        after = p[end_idx+1:]
-        
-        before[-1][1] = list(a)
-        before[-1][2] = list(a)
-        line_to_c = [list(c)] * 3
-        line_to_d = [list(d)] * 3
-        line_to_b = [list(b)] * 3
-        
-        p = before + [line_to_c] + [line_to_d] + [line_to_b] + after
-        
-    path.set('d', cubicsuperpath.formatPath([p]) + 'Z')
+    return new_path
+
+def findPointPairs(points):
+    pairs = []
+    
+    for i, elem in enumerate(points):
+        if i % 2 != 0:
+            pairs += [(points[i - 1], points[i])]
+    
+    return pairs
+
+def check_relative_difference(val1, val2, tolerance=0.9999):
+    return (min(val1,val2)/max(val1,val2)) >= tolerance
+ 
+def read_stored_info(type, obj):
+    if type == 'pathlength':
+        return float(obj.get(type))
+    elif type == 'segmentlengths':
+        tmp = obj.get(type).split(' ')
+        tmp = map(float, tmp)
+        #raise Exeception(str(tmp))
+        return tmp
+    return None
+
+def printValue(value, self):
+#creates text object based on given value (debugging purposes)   
+    what = value
+
+    # Get access to main SVG document element and get its dimensions.
+    svg = self.document.getroot()
+    # or alternatively
+    # svg = self.document.xpath('//svg:svg',namespaces=inkex.NSS)[0]
+
+    # Again, there are two ways to get the attibutes:
+    width  = self.unittouu(svg.get('width'))
+    height = self.unittouu(svg.attrib['height'])
+
+    # Create a new layer.
+    layer = inkex.etree.SubElement(svg, 'g')
+    layer.set(inkex.addNS('label', 'inkscape'), 'Hello %s Layer' % (what))
+    layer.set(inkex.addNS('groupmode', 'inkscape'), 'layer')
+    # Create text element
+    text = inkex.etree.Element(inkex.addNS('text','svg'))
+    text.text = 'Value: %s' % (what)
+
+    # Set text position to center of document.
+    text.set('x', str(width / 2))
+    text.set('y', str(height / 2))
+    # Center text horizontally with CSS style.
+    style = {'text-align' : 'center', 'text-anchor': 'middle'}
+    text.set('style', formatStyle(style))
+
+    # Connect elements together.
+    layer.append(text)
+    
+def originParse(pathTarget):
+# find the starting point of a path
+    dString = pathTarget.get('d')
+    
+    dToken = 1
+    xString = ""
+    yString = ""
+    symbols = "0123456789.-"
+    
+    while dString[dToken] not in symbols:
+        dToken += 1
+    
+    while dString[dToken] in symbols:
+        xString += dString[dToken]
+        dToken += 1
+    
+    while dString[dToken] not in symbols:
+        dToken += 1
+    
+    while dString[dToken] in symbols:
+        yString += dString[dToken]
+        dToken += 1
+    
+    xf = float(xString)
+    yf = float(yString)
+
+    return [xf,yf]    
    
 class Length(inkex.Effect):
     def __init__(self):
@@ -158,21 +257,11 @@ class Length(inkex.Effect):
                         action="store", type="string", 
                         dest="unit", default="mm",
                         help="The unit of the measurement")
-                              
-        self.OptionParser.add_option("-q", "--pointsT",
-                        action="store", type="int", 
-                        dest="pointsT", default=20,
-                        help="How Many points of connection are present(teeth)")
-
-        self.OptionParser.add_option("-n", "--offsetT",
-                        action="store", type="float", 
-                        dest="offsetT", default=5,
-                        help="Offset")
-
-        self.OptionParser.add_option("-y", "--paraTooth",
-                        action="store", type="float", 
-                        dest="paraTooth", default=5,
-                        help="Scale Factor (Drawing:Real Length)")
+                        
+        self.OptionParser.add_option("-s", "--radioScale",
+                        action="store", type="string", 
+                        dest="radioScale", default="B2S",
+                        help="Radio Button Scaling")
                         
         self.OptionParser.add_option("--tab",
                         action="store", type="string", 
@@ -227,44 +316,41 @@ class Length(inkex.Effect):
         
         id_min = 0
         id_max = 1
+        minOrigin = []
+        maxOrigin = []
         if obj_lengths[id_min] > obj_lengths[id_max]:
             id_min = 1
             id_max = 0
             
-        #verifyDocument(doc)
-        obj_lengths = []  
-        obj_ids = []
-        obj_nodes = []
-        for id, node in self.selected.iteritems():
-            if node.tag == inkex.addNS('path','svg'):
-                mat = simpletransform.composeParents(node, [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]])
-                p = cubicsuperpath.parsePath(node.get('d'))
-                simpletransform.applyTransformToPath(mat, p)
-                node.set('d', cubicsuperpath.formatPath(p))
-                factor *= scale/self.unittouu('1'+self.options.unit)
-                if self.options.type == "length":
-                    slengths, stotal = csplength(p)
-                    
-                    #save the path length and segment lengths in the document 
-                    node.set('pathlength', str(stotal))
-                    tmp = ''
-                    for slen in slengths[0][::-1]:
-                        tmp += str(slen) + ' '
-                    tmp = tmp[:-1] #remove the space at the end
-                    node.set('segmentlengths', tmp)
-                    
-                    # self.group = inkex.etree.SubElement(node.getparent(),inkex.addNS('text','svg'))
-                    obj_lengths += [stotal]
-                    obj_ids += [id]
-                    obj_nodes += [node] 
-                # Format the length as string
-                # lenstr = locale.format("%(len)25."+str(prec)+"f",{'len':round(stotal*factor*self.options.scale,prec)}).strip()
+        minOrigin = originParse(obj_nodes[id_min])
+        maxOrigin = originParse(obj_nodes[id_max])
         
-        points = []
+        if self.options.radioScale == "B2S":
+            ratio = obj_lengths[id_min] / obj_lengths[id_max]
+            obj_ori = []
+            ori_trans = []      
+            obj_nodes[id_max].set('transform', 'scale(' + str(ratio) + ' ' + str(ratio) +')')
+            fuseTransform(obj_nodes[id_max])
+            
+            obj_ori = originParse(obj_nodes[id_max])
+            ori_trans = [(maxOrigin[0] - obj_ori[0]), (maxOrigin[1] - obj_ori[1])]
+            obj_nodes[id_max].set('transform', 'translate(' + str(ori_trans[0]) + ' ' + str(ori_trans[1]) +')')
+            fuseTransform(obj_nodes[id_max])
+            
+        elif self.options.radioScale == "S2B":
+            ratio = obj_lengths[id_max] / obj_lengths[id_min]
+            obj_ori = []
+            ori_trans = []
+            obj_nodes[id_min].set('transform', 'scale(' + str(ratio) + ' ' + str(ratio) +')')
+            fuseTransform(obj_nodes[id_min])
+            
+            obj_ori = originParse(obj_nodes[id_min])
+            #drawCircle(obj_ori, self.options.paraStitch, doc)
+            ori_trans = [(minOrigin[0] - obj_ori[0]), (minOrigin[1] - obj_ori[1])]
+            obj_nodes[id_min].set('transform', 'translate(' + str(ori_trans[0]) + ' ' + str(ori_trans[1]) +')')
+            fuseTransform(obj_nodes[id_min])
         
-        addNotches(obj_nodes[id_min], self.options.pointsT, self.options.offsetT, self.options.paraTooth,doc)
-        addNotches(obj_nodes[id_max], self.options.pointsT, self.options.offsetT, self.options.paraTooth,doc)
-
+        
         
 if __name__ == '__main__':
     e = Length()
