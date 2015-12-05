@@ -40,7 +40,8 @@ import simpletransform
 import cubicsuperpath
 import bezmisc
 import addnodes
-import math
+import math 
+import dformer
 
 from simpletransform import fuseTransform 
 from simplepath import parsePath, formatPath
@@ -100,151 +101,6 @@ def csplength(csp):
             total += l
     return lengths, total
 
-#Defined Functions 
-def verifyDocument(document):
-    document.set('width', '18in')
-    document.set('height', '32in')
-    
-    margin = inkex.etree.Element(inkex.addNS('rect', 'svg'))
-    margin.set('y', '14.940762')
-    margin.set('x', '-301.96371')
-    margin.set('width', '1022.4807')
-    margin.set('height', '1840.9845')
-    margin.set('stroke', 'red')
-    margin.set('stroke-width', '1')
-    margin.set('fill', 'none')
-    
-    document.append(margin)
-
-def rotateSlope((x, y), degrees):
-    degrees = degrees % 360
-    radians = math.radians(degrees)
-    new_x = x * math.cos(radians) - y * math.sin(radians)
-    new_y = x * math.sin(radians) + y * math.cos(radians)
-    return new_x, new_y
-
-def computeSlope((x1, y1), (x2, y2)):
-    return x2 - x1, y2 - y1
-    
-def perpendicularSlope((dx, dy)):
-    return -dy, dx
-    
-def computePointAlongLine((dx, dy), (x, y), distance):
-    #compute unit vector
-    norm = (dx ** 2 + dy ** 2) ** 0.5
-    u_x = dx / norm
-    u_y = dy / norm
-    
-    new_x = x + distance * u_x
-    new_y = y + distance * u_y
-    
-    return new_x, new_y
-    
-def replaceSegmentWith(path, start, end, subpath):
-    new_path = ""
-    
-    split_path = path.replace("L", "C").split("C")
-    
-    curves = split_path[1:]
-    new_path += split_path[0] + curves[0]
-    i = 1
-    while i < len(curves):
-        points = curves[i - 1].split()
-        inkex.errormsg(str(start) + " " + str(end) + " " + curves[i] + '\n')
-        if start == (float(points[-2]), float(points[-1])):
-            points = curves[i].split()
-            while end != (points[-2], points[-1]):
-                i += 1
-                points = curves[i].split()
-            new_path += subpath
-        else:
-            new_path += "C" + curves[i]
-        
-        i += 1
-    
-    return new_path
-
-def findPointPairs(points):
-    pairs = []
-    
-    for i, elem in enumerate(points):
-        if i % 2 != 0:
-            pairs += [(points[i - 1], points[i])]
-    
-    return pairs
-
-def check_relative_difference(val1, val2, tolerance=0.9999):
-    return (min(val1,val2)/max(val1,val2)) >= tolerance
- 
-def read_stored_info(type, obj):
-    if type == 'pathlength':
-        return float(obj.get(type))
-    elif type == 'segmentlengths':
-        tmp = obj.get(type).split(' ')
-        tmp = map(float, tmp)
-        #raise Exeception(str(tmp))
-        return tmp
-    return None
-
-def printValue(value, self):
-#creates text object based on given value (debugging purposes)   
-    what = value
-
-    # Get access to main SVG document element and get its dimensions.
-    svg = self.document.getroot()
-    # or alternatively
-    # svg = self.document.xpath('//svg:svg',namespaces=inkex.NSS)[0]
-
-    # Again, there are two ways to get the attibutes:
-    width  = self.unittouu(svg.get('width'))
-    height = self.unittouu(svg.attrib['height'])
-
-    # Create a new layer.
-    layer = inkex.etree.SubElement(svg, 'g')
-    layer.set(inkex.addNS('label', 'inkscape'), 'Hello %s Layer' % (what))
-    layer.set(inkex.addNS('groupmode', 'inkscape'), 'layer')
-    # Create text element
-    text = inkex.etree.Element(inkex.addNS('text','svg'))
-    text.text = 'Value: %s' % (what)
-
-    # Set text position to center of document.
-    text.set('x', str(width / 2))
-    text.set('y', str(height / 2))
-    # Center text horizontally with CSS style.
-    style = {'text-align' : 'center', 'text-anchor': 'middle'}
-    text.set('style', formatStyle(style))
-
-    # Connect elements together.
-    layer.append(text)
-    
-def originParse(pathTarget):
-# find the starting point of a path
-    dString = pathTarget.get('d')
-    
-    dToken = 1
-    xString = ""
-    yString = ""
-    symbols = "0123456789.-"
-    
-    while dString[dToken] not in symbols:
-        dToken += 1
-    
-    while dString[dToken] in symbols:
-        xString += dString[dToken]
-        dToken += 1
-    
-    while dString[dToken] not in symbols:
-        dToken += 1
-    
-    while dString[dToken] in symbols:
-        yString += dString[dToken]
-        dToken += 1
-    
-    xf = float(xString)
-    yf = float(yString)
-
-    return [xf,yf]    
-   
 class Length(inkex.Effect):
     def __init__(self):
         inkex.Effect.__init__(self)
@@ -322,8 +178,8 @@ class Length(inkex.Effect):
             id_min = 1
             id_max = 0
             
-        minOrigin = originParse(obj_nodes[id_min])
-        maxOrigin = originParse(obj_nodes[id_max])
+        minOrigin = dformer.originParse(obj_nodes[id_min])
+        maxOrigin = dformer.originParse(obj_nodes[id_max])
         
         if self.options.radioScale == "B2S":
             ratio = obj_lengths[id_min] / obj_lengths[id_max]
@@ -332,7 +188,7 @@ class Length(inkex.Effect):
             obj_nodes[id_max].set('transform', 'scale(' + str(ratio) + ' ' + str(ratio) +')')
             fuseTransform(obj_nodes[id_max])
             
-            obj_ori = originParse(obj_nodes[id_max])
+            obj_ori = dformer.originParse(obj_nodes[id_max])
             ori_trans = [(maxOrigin[0] - obj_ori[0]), (maxOrigin[1] - obj_ori[1])]
             obj_nodes[id_max].set('transform', 'translate(' + str(ori_trans[0]) + ' ' + str(ori_trans[1]) +')')
             fuseTransform(obj_nodes[id_max])
@@ -344,7 +200,7 @@ class Length(inkex.Effect):
             obj_nodes[id_min].set('transform', 'scale(' + str(ratio) + ' ' + str(ratio) +')')
             fuseTransform(obj_nodes[id_min])
             
-            obj_ori = originParse(obj_nodes[id_min])
+            obj_ori = dformer.originParse(obj_nodes[id_min])
             #drawCircle(obj_ori, self.options.paraStitch, doc)
             ori_trans = [(minOrigin[0] - obj_ori[0]), (minOrigin[1] - obj_ori[1])]
             obj_nodes[id_min].set('transform', 'translate(' + str(ori_trans[0]) + ' ' + str(ori_trans[1]) +')')
