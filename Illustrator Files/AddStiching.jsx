@@ -1,19 +1,109 @@
+var balfax = 0;
+var balfbx = 0;
+var balfcx = 0;
+var balfay = 0;
+var balfby = 0;
+var balfcy = 0;
+
+function balf(t)
+{
+    var retval = Math.pow((balfax * (t * t) + balfbx * t + balfcx), 2) + Math.pow((balfay * (t * t) + balfby * t + balfcy), 2);
+    return Math.sqrt(retval);
+}
+
+function bezierparameterize(start, ctrl_1, ctrl_2, end)
+{
+    var x0 = start[0];
+    var y0 = start[1];
+    
+    var cx = 3 * (ctrl_1[0] - x0);
+    var bx = 3 * (ctrl_2[0] - ctrl_1[0]) - cx;
+    var ax = end[0] - x0 - cx - bx;
+    
+    var cy = 3 * (ctrl_1[1] - y0);
+    var by = 3 * (ctrl_2[1] - ctrl_1[1]) - cy;
+    var ay = end[1] - y0 - cy - by;
+    
+    return [ax, ay, bx, by, cx, cy, x0, y0];
+}
+
+function simpson(a, b)
+{
+    var n_limit = 4096;
+    var tolerance = 0.00001;
+    var n = 2;
+    var multiplier = (b - a)/6.0;
+    var endsum = balf(a) + balf(b);
+    var interval = (b - a)/2.0;
+    var asum = 0.0;
+    var bsum = balf(a + interval);
+    var est1 = multiplier * (endsum + (2.0 * asum) + (4.0 * bsum));
+    var est0 = 2.0 * est1;
+    
+    while(n < n_limit && Math.abs(est1 - est0) > tolerance)
+    {
+        n = n * 2;
+        multiplier /= 2;
+        interval /= 2.0;
+        asum += bsum;
+        bsum = 0.0;
+        est0 = est1;
+        for(var i = 1; i < n; i += 2)
+        {
+            bsum += balf(a + (i * interval));
+            est1 = multiplier * (endsum + (2.0 * asum) + (4.0 * bsum))
+        }
+    }
+    
+    return est1;
+}
+
 function segmentLength(a, b)
 {
-    var tmpPath = app.activeDocument.pathItems.add();
-    tmpPath.setEntirePath([a[0],b[0]]);
+    var tmp = bezierparameterize(a[0], a[2], b[1], b[0]);
+    balfax = 3 * tmp[0];
+    balfbx = 2 * tmp[2];
+    balfcx = tmp[4];
+    balfay = 3 * tmp[1];
+    balfby = 2 * tmp[3];
+    balfcy = tmp[5];
     
-    tmpPath.pathPoints[0].pointType = a[3];
-    tmpPath.pathPoints[0].leftDirection = a[1];
-    tmpPath.pathPoints[0].rightDirection = a[2];
+    return simpson(0.0,1.0);
+}
+
+function bezieratlength(a, b, l)
+{
+    var tmp = bezierparameterize(a[0], a[2], b[1], b[0]);
+    balfax = 3 * tmp[0];
+    balfbx = 2 * tmp[2];
+    balfcx = tmp[4];
+    balfay = 3 * tmp[1];
+    balfby = 2 * tmp[3];
+    balfcy = tmp[5];
     
-    tmpPath.pathPoints[1].pointType = b[3];
-    tmpPath.pathPoints[1].leftDirection = b[1];
-    tmpPath.pathPoints[1].rightDirection = b[2];
+    var t = 1.0;
+    var tdiv = t;
+    var curlen = simpson(0.0, t);
+    var targetlen = l * curlen;
+    var diff = curlen - targetlen;
+    var tolerance = 0.00001;
     
-    var length = tmpPath.length;
-    tmpPath.remove();
-    return length;
+    while(Math.abs(diff) > tolerance)
+    {
+        tdiv /= 2.0;
+        if(diff < 0)
+        {
+            t += tdiv;
+        }
+        else
+        {
+            t -= tdiv;
+        }
+        curlen = simpson(0.0, t);
+        diff = curlen - targetlen;
+    }
+    
+    return t;
 }
 
 function segmentLengths(path)
@@ -30,7 +120,10 @@ function segmentLengths(path)
 function parse_pnt(pnt)
 {
     with(pnt)
+    {
+        if (pointType == PointType.CORNER) return [anchor, anchor, anchor, PointType.SMOOTH];
         return [anchor, leftDirection, rightDirection, pointType];
+    }
 }
 
 function parse_path(path)
@@ -39,6 +132,19 @@ function parse_path(path)
     for(var i = 0; i < path.pathPoints.length; i++)
     {
         pnts.push(parse_pnt(path.pathPoints[i]));
+    }
+    
+    for(var j = 0; j < pnts.length; j++)
+    {
+        if(pnts[j][0] == pnts[j][1])
+        {
+            var prev = (j - 1 + pnts.length) % pnts.length;
+            
+            var ctrl_x = (pnts[j][0] - pnts[prev][0]) * 0.25 + pnts[prev][0];
+            var ctrl_y = (pnts[j][1] - pnts[prev][1]) * 0.25 + pnts[prev][1]; 
+            
+            pnts[j][1] = [ctrl_x, ctrl_y];
+        }
     }
     
     return pnts;
@@ -94,6 +200,8 @@ function generate_points(p, n, slide)
     for(var i = 0; i < p.length; i++)
     {
         var next = (i + 1) % p.length;
+        var curr_seg_len = segmentLength(p[i], p[next]);
+        //alert("current = " + curr_seg_len);
         if(target_dist == 0.0)
         {
             point_list.push(p[i]);
@@ -102,32 +210,34 @@ function generate_points(p, n, slide)
             continue;
         }
         
-        else if(target_dist >= seg_lengths[i])
+        else if(target_dist >= curr_seg_len)
         {
-            target_dist -= seg_lengths[i];
+            target_dist -= curr_seg_len;
         }
         
         else
         {
             //alert("before split = " + p.length);
-            t = target_dist / seg_lengths[i];
+            var t =  bezieratlength(p[i], p[next], target_dist/curr_seg_len);
             
             tmp = split_curve(p[i], p[next], t);
-                
+            //alert("original = " + seg_lengths[i]);    
             p[i][2] = tmp[0][2];
             p[next][1] = tmp[2][1];
             p.splice(i + 1,0, tmp[1]);
             
             point_list.push(tmp[1]);
 
-            seg_lengths[i] = segmentLength(tmp[0], tmp[1]);
-            seg_lengths.splice(i + 1, 0, segmentLength(tmp[1], tmp[2]));
-
+            //seg_lengths[i] = segmentLength(tmp[0], tmp[1]);
+            //seg_lengths.splice(i + 1, 0, segmentLength(tmp[1], tmp[2]));
+            
+            //alert("new = " + (segmentLength(tmp[0], tmp[1]) + segmentLength(tmp[1], tmp[2])));
+            
             target_dist = path_length / n;
             //alert("after split = " + p.length);
             //i += 1;
         }
-        test += seg_lengths[i];
+        test += curr_seg_len;
         
         if(point_list.length == n)
             break;
@@ -149,7 +259,18 @@ function perpendicularSlope(slope)
 {
     return [(-slope[1]), (slope[0])];
 }
- 
+
+function rotateSlope(pts, degrees)
+{
+    var degrees = degrees % 360;
+    var radians = degrees * (Math.PI / 180);
+    
+    var new_x = pts[0] * Math.cos(radians) - pts[1] * Math.sin(radians);
+    var new_y = pts[0] * Math.sin(radians) + pts[1] * Math.cos(radians);
+
+    return [new_x, new_y];
+}
+
 function findPointPairs(pts)
 {
     var pairs = [];
@@ -189,7 +310,7 @@ function derivative_bcurve(start, ctrl1, ctrl2, end, t)
     
     return [d_x, d_y];
 }
-    
+
 function add_stiches(p, n, o, diameter, slide, invert)
 {
     tmp = generate_points(p, n, slide);
@@ -205,12 +326,15 @@ function add_stiches(p, n, o, diameter, slide, invert)
 
         app.activeDocument.pathItems.ellipse(top, left, diameter, diameter);
     }
-    
+}
+
+function offset_entire_path(p, o, invert)
+{
     if(!invert)
         {
             o = -1 * o;
         }
-    
+
     for(var j = 0; j < p.length; j++)
     {
         var dx_r = p[j][2][0] - p[j][0][0];
@@ -231,9 +355,44 @@ function add_stiches(p, n, o, diameter, slide, invert)
         
         var new_pt = computePointAlongLine(p_slope, p[j], o);
         
+        var prev = ((j - 1) + p.length) % p.length;
+        var next = (j + 1) % p.length;
+        
+        var vec_p_c = [(p[j][1][0] - p[prev][2][0]), (p[j][1][1] - p[prev][2][1])];
+        var norm1 = Math.sqrt(((vec_p_c[0] * vec_p_c[0]) + (vec_p_c[1] * vec_p_c[1])));
+        var norm2 = Math.sqrt(((dx_l * dx_l) + (dy_l * dy_l)));
+        var dot_prod = vec_p_c[0] * dx_l + vec_p_c[1] * dy_l;
+        var angle = Math.acos(dot_prod / (norm1 * norm2)) * 0.5;
+        var left_ctrl_slope = rotateSlope(vec_p_c, 360 - (angle * (180 / Math.PI)));
+        var new_left_ctrl = computePointAlongLine(left_ctrl_slope, [p[j][1]],o);
+        
+        var vec1 = [(new_left_ctrl[0] - new_pt[0]), (new_left_ctrl[1] - new_pt[1])];
+        var norm1 = Math.sqrt(((vec1[0] * vec1[0]) + (vec1[1] * vec1[1])));
+        var norm2 = Math.sqrt(((dx_l * dx_l) + (dy_l * dy_l)));
+        var dot_prod = vec1[0] * dx_l + vec1[1] * dy_l;
+        var angle = Math.acos(dot_prod / (norm1 * norm2)) * 0.5;
+        var tmp_slope = rotateSlope(vec1, 360 - (angle * (180 / Math.PI)));
+        new_left_ctrl = computePointAlongLine(tmp_slope, [new_pt], norm1);
+        
+        var vec_n_c = [(p[j][2][0] - p[next][1][0]), (p[j][2][1] - p[next][1][1])];
+        var norm1 = Math.sqrt(((vec_n_c[0] * vec_n_c[0]) + (vec_n_c[1] * vec_n_c[1])));
+        var norm2 = Math.sqrt(((dx_r * dx_r) + (dy_r * dy_r)));
+        var dot_prod = vec_n_c[0] * dx_r + vec_n_c[1] * dy_r;
+        var angle = Math.acos(dot_prod / (norm1 * norm2));
+        var right_ctrl_slope = rotateSlope(vec_n_c, (angle * (180 / Math.PI)));
+        var new_right_ctrl = computePointAlongLine(right_ctrl_slope, [p[j][2]],o);
+        
+        var vec1 = [(new_right_ctrl[0] - new_pt[0]), (new_right_ctrl[1] - new_pt[1])];
+        var norm1 = Math.sqrt(((vec1[0] * vec1[0]) + (vec1[1] * vec1[1])));
+        var norm2 = Math.sqrt(((dx_r * dx_r) + (dy_r * dy_r)));
+        var dot_prod = vec1[0] * dx_r + vec1[1] * dy_r;
+        var angle = Math.acos(dot_prod / (norm1 * norm2));
+        var tmp_slope = rotateSlope(vec1, (angle * (180 / Math.PI)));
+        new_right_ctrl = computePointAlongLine(tmp_slope, [new_pt], norm1);
+        
         p[j][0] = new_pt;
-        p[j][1] = [new_pt[0] + dx_l, new_pt[1] + dy_l];
-        p[j][2] = [new_pt[0] + dx_r, new_pt[1] + dy_r];
+        p[j][1] = new_left_ctrl;
+        p[j][2] = new_right_ctrl;
     }
     
     return p;
@@ -278,7 +437,7 @@ if(app.documents.length > 0)
         
         for(var j = 0; j < selected_paths.length; j++)
         {
-            p = parse_path(selected_paths[j]);
+            var p = parse_path(selected_paths[j]);
             
             var invert = false
             
@@ -291,7 +450,7 @@ if(app.documents.length > 0)
             
             var num_nodes = 20;
             var node_length = 20;
-            var diameter = 10;
+            var diameter = 5;
             var slide = 0;
             var input = false;
             
@@ -302,9 +461,12 @@ if(app.documents.length > 0)
                 invert = !invert;
             }
             
-            p = add_stiches(p, num_nodes, node_length, diameter, slide, invert);
+            add_stiches(p, num_nodes, node_length, diameter, slide);
             
-            unparse_path(selected_paths[j], p);
+            var new_p = parse_path(selected_paths[j]);
+            new_p = offset_entire_path(new_p, node_length, invert);
+            
+            unparse_path(selected_paths[j], new_p);
         }
     }
 }
