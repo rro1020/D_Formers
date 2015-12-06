@@ -116,7 +116,8 @@ def addStitching(path, n, offset, diameter, document):
             i += 1
             start_pt = parsedPath[i - 1][1]
 
-        x, y = bezmisc.bezierslopeatt((parsedPath[i-1][1], parsedPath[i-1][2], parsedPath[i][0], parsedPath[i][1]), 0)
+        #x, y = bezmisc.bezierslopeatt((parsedPath[i-1][1], parsedPath[i-1][2], parsedPath[i][0], parsedPath[i][1]), 0)
+        x, y = bezmisc.bezierslopeatt((parsedPath[i-1][0], parsedPath[i-1][1], parsedPath[i-1][2], parsedPath[i][1]), 0)
         pSlope = dformer.perpendicularSlope((x, y))  
         index = points.index(p)
         newPoint = dformer.computePointAlongLine(pSlope, p, offset)
