@@ -386,10 +386,6 @@ def getMidPoint(p1, p2):
 def checkRelativeDifference(val1, val2, tolerance=0.9999):
     return (min(val1,val2)/max(val1,val2)) >= tolerance
 
-# Error Handling: 
-# - report when edges overlap 
-# - report when offset size is greater than width of shape 
-# -     
 def rescalePath(path, n, oriCenterPoint, offset, diameter, document): 
     #oriPointList = generatePoints(path, n)
     #oriCenterPoint = getCenterPoint(oriPointList)
@@ -447,6 +443,91 @@ def read_stored_info(type, obj):
         #raise Exeception(str(tmp))
         return tmp
     return None
+
+def generatePointsWithOffset(obj, offset, n):
+    pointList = []  
+    targetDist = offset % read_stored_info("pathlength", obj)/ n 
+    segmentLengths = [0.0] + read_stored_info("segmentlengths", obj)[::-1]
+    
+    mat = simpletransform.composeParents(obj, [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]])
+    p = cubicsuperpath.parsePath(obj.get('d'))
+    simpletransform.applyTransformToPath(mat, p)
+    
+    segments = p[0]
+    new_path = segments
+    
+    i = 0
+    count = 0
+    total = 0
+    
+    while i < len(segments) - 1: 
+        if segmentLengths[i] == targetDist:
+            pointList += [segments[i][1]]
+            targetDist = read_stored_info("pathlength", obj)/ n
+            #raise Exception(str(pointList))
+
+        elif targetDist > segmentLengths[i] or segmentLengths[i] == 0:
+            #raise Exception(str(targetDist))
+            targetDist -= segmentLengths[i]
+
+        else:
+            t = targetDist / float(segmentLengths[i]) 
+            
+            #inkex.errormsg("t = " + str(t))
+            #inkex.errormsg("targetPt = " + str(bezmisc.bezierpointatt((segments[i - 1][1], segments[i - 1][2], segments[i][0], segments[i][1]),t)))
+             
+            t1 = segments[i-1][1]
+            t2 = segments[i][1]
+            
+            #sub1, sub2 = bezmisc.beziersplitatt((segments[i-1][-2], segments[i-1][-1], segments[i][0], segments[i][1]), t)
+            pathList = addnodes.cspbezsplitatlength(segments[i-1], segments[i], t,tolerance=0.00001)
+            pointList += [pathList[1][1]]
+            #inkex.errormsg("added point " + str(pointList[-1]))
+            prev = segments[:i - 1]
+            next = segments[i + 1:]
+            segments = prev + pathList + next
+            #inkex.errormsg("Segments[\n" + str(segments) + "\n]")
+            
+            #len1 = bezmisc.bezierlength((pathList[0][1][:], pathList[0][2][:], pathList[1][0][:], pathList[1][1][:]),tolerance=0.00001)
+            #len2 = bezmisc.bezierlength((pathList[1][1][:], pathList[1][2][:], pathList[2][0][:], pathList[2][1][:]),tolerance=0.00001)
+            
+            len1 = targetDist
+            len2 = segmentLengths[i] - targetDist
+            
+            if abs((len1 + len2) - segmentLengths[i]) >= 0.0001:
+                raise Exception("There is an issue with the bezier split function. (" + str(len1 + len2) + " vs. " + str(segmentLengths[i]) + ")")
+                
+            
+            #inkex.errormsg("Split Point = " + str(pointList[-1]))
+            #inkex.errormsg("len1 = " + str(len1) + "\nlen2 = " + str(len2) + " \nsegmentLengths[i] = " + str(segmentLengths[i]))
+            
+            prev = segmentLengths[:i]
+            next = segmentLengths[i+1:]
+            #inkex.errormsg("Pathlist = " + str(pathList))
+            segmentLengths = prev + [len1, len2] + next
+        
+            #obj.set('d', cubicsuperpath.formatPath([segments]))
+            #segments = cubicsuperpath.parsePath(obj.get('d'))[0]
+            targetDist = read_stored_info("pathlength", obj)/n
+            
+            
+            count += 1
+        if(len(pointList) == n):
+            break;
+        i += 1
+    
+    pointList += [segments[0][1]]
+    
+    if abs(sum(segmentLengths) - read_stored_info("pathlength", obj)) >= 0.001:
+        #inkex.errormsg(str(sum(segmentLengths) - read_stored_info("pathlength", obj)))
+        raise Exception("Internal Error: The total length of the new path does not equal the original path.")
+    obj.set('d', cubicsuperpath.formatPath([segments[:-1]])+'Z')
+    obj.set('segmentlengths', str(segmentLengths))
+    
+    #if len(pointList) != n:
+    #    raise Exception("Internal Error: The algorithm did not find the required number of points (" + str(len(pointList)) + " out of " + str(n) + ").")
+    
+    return pointList 
 	
 def generatePoints(obj, n):
     pointList = []  
@@ -464,7 +545,7 @@ def generatePoints(obj, n):
     count = 0
     total = 0
     
-    while i < len(segments) - 1: 
+    while i < len(segments): 
         if segmentLengths[i] == targetDist:
             pointList += [segments[i][1]]
             targetDist = read_stored_info("pathlength", obj)/ n
@@ -786,11 +867,6 @@ class Length(inkex.Effect):
                 # lenstr = locale.format("%(len)25."+str(prec)+"f",{'len':round(stotal*factor*self.options.scale,prec)}).strip()
         
         points = []
-        #points = generatePoints(obj_nodes[id_min], self.options.points)
-        #points = generatePoints(obj_nodes[id_max], self.options.points)
-        #addNotches(obj_nodes[id_min], self.options.points, self.options.offset, self.options.paraTooth,doc)
-        
-        #printValue(self.options.tab, self)
         
         if self.options.tab == "\"stitch\"":
             addStitching(obj_nodes[id_min], self.options.points, self.options.offset, self.options.paraStitch, doc)
@@ -805,18 +881,7 @@ class Length(inkex.Effect):
             addLeaves(obj_nodes[id_min], self.options.points, self.options.offset, self.options.paraLeaf, doc)
             addLeaves(obj_nodes[id_max], self.options.points, self.options.offset, self.options.paraLeaf, doc)
         
-        #inkex.errormsg(str(points))
-        #inkex.errormsg(str(len(points)))
-        
-        #buildType Radio Button Here
-        
-    #q = inkex.getElementById(doc, obj_nodes[id_min]); 
-        
 
-    # def addCross(self, node, x, y, scale):
-        # l = 3*scale         # 3 pixels in document units
-        # node.set('d', 'm %s,%s %s,0 %s,0 m %s,%s 0,%s 0,%s' % (str(x-l), str(y), str(l), str(l), str(-l), str(-l), str(l), str(l)))
-        # node.set('style', 'stroke:#000000;fill:none;stroke-width:%s' % str(0.5*scale))
 
     
 if __name__ == '__main__':

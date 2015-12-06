@@ -103,6 +103,7 @@ def csplength(csp):
     
 def addNotches(path, n, offset, angle, document):
     points = dformer.generatePoints(path, 2 * n)
+    #points = dformer.generatePointsWithOffset(path, 12, 2 * n)
     pt_pairs = dformer.findPointPairs(points)
     #inkex.errormsg("pt_pairs = " + str(len(pt_pairs)))
     
