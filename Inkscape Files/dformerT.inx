@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <inkscape-extension xmlns="http://www.inkscape.org/namespace/inkscape/extension">
-	<_name>Tooth Fabrication</_name>
+	<_name>Tooth Fabricator</_name>
 	<id>com.njhurst.filter.dformerT</id>
 	<dependency type="executable" location="extensions">dformerT.py</dependency>
 	<dependency type="executable" location="extensions">inkex.py</dependency>
