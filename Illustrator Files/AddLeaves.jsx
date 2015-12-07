@@ -199,7 +199,7 @@ function generate_points(p, n, slide)
     for(var i in seg_lengths) {path_length += seg_lengths[i];}
     
     var target_dist = (path_length/n) * slide;
-
+    alert(target_dist);
     var point_list = [];
     var test = 0.0;
     //alert("p length = " + p.length);
@@ -310,13 +310,16 @@ function check_relative_difference(val1, val2, tolerance)
     return ((Math.min(val1, val2) / Math.max(val1, val2)) >= tolerance);
 }
     
-function add_notches(p, n, o, angle, slide, invert)
+function add_leaves(p, n, o, slide, invert)
 {
     tmp = generate_points(p, n * 2, slide);
     
     p = tmp[0];
     pts = tmp[1];
+    alert("found pts = " + pts.length);
     pair_pts = findPointPairs(pts);
+    
+    alert("pair lengths = " + pair_pts.length);
     
     var j = 0;
     
@@ -329,10 +332,10 @@ function add_notches(p, n, o, angle, slide, invert)
         var slope = computeSlope(a, b);
         var p_slope = perpendicularSlope(slope);
 
-        var ac_slope = rotateSlope(p_slope, 360 - angle);
-        var bd_slope = rotateSlope(p_slope, angle);
+        var ac_slope = rotateSlope(p_slope, 0);
+        var bd_slope = rotateSlope(p_slope, 0);
         
-        var tmp = o * Math.tan(angle * (Math.PI / 180));
+        var tmp = o * Math.tan(0 * (Math.PI / 180));
         var dist = Math.sqrt(tmp * tmp + o * o);
         
         //alert("dist = " + dist);
@@ -347,7 +350,23 @@ function add_notches(p, n, o, angle, slide, invert)
         dist = dist * polarity;
         
         var c = computePointAlongLine(ac_slope, a, dist);
+        
         var d = computePointAlongLine(bd_slope, b, dist);
+        var midpt = [(c[0] + d[0])/2, (c[1] + d[1])/2];
+        
+        var a1 = 45;
+        var a2 = 315;
+        
+        if(invert)
+        {
+            a1 = 315;
+            a2 = 45;
+        }
+        
+        var mc_slope = rotateSlope(ac_slope, a1);
+        var md_slope = rotateSlope(ac_slope, a2);
+        var m_c = computePointAlongLine(mc_slope, a, dist/2);
+        var m_d = computePointAlongLine(md_slope, b, dist/2);
         
         var start_pt = p[j];
         //alert("j = " + j + " " + start_pt);
@@ -389,17 +408,15 @@ function add_notches(p, n, o, angle, slide, invert)
         }
         
         
-        before[before.length - 1][2] = a[0];
+        before[before.length - 1][2] = m_c;
         
-        var pt_c = [c, c, c, PointType.SMOOTH];
-        var pt_d = [d, d, d, PointType.SMOOTH];
+        var pt_m = [midpt, c, d, PointType.SMOOTH];
         
-        after[0][1] = b[0];
+        after[0][1] = m_d;
         
         //alert("c = " + pt_c);
         
-        before.push.apply(before, [pt_c]);
-        before.push.apply(before, [pt_d]);
+        before.push.apply(before, [pt_m]);
         before.push.apply(before, after);
         
         p = before
@@ -419,17 +436,12 @@ function setUpUI()
     
     var g1 = ui.add("group", undefined, "");
     g1.alignment = "column"
-    var st1 = g1.add("statictext", undefined, "Number of Notches: ");
+    var st1 = g1.add("statictext", undefined, "Number of Leaves: ");
     var quantity = g1.add("edittext", undefined, "");
     
     var g2 = ui.add("group", undefined, "");
-    var st2 = g2.add("statictext", undefined, "Length of Notches: ");
+    var st2 = g2.add("statictext", undefined, "Length of Leaves: ");
     var notch_length = g2.add("edittext", undefined, "");
-    
-    var g3 = ui.add("group", undefined, "");
-    
-    var st3 = g3.add("statictext", undefined, "Angle on Notches: ");
-    var angle = g3.add("edittext", undefined, "");
     
     var g4 = ui.add("group", undefined, "");
     var st4 = g4.add("statictext", undefined, "Slide along Path: ");
@@ -456,7 +468,6 @@ function setUpUI()
         args = [];
         args.push(parseFloat(quantity.text));
         args.push(parseFloat(notch_length.text));
-        args.push(parseFloat(angle.text));
         args.push((slide.value/100).toFixed(2));
         args.push(invert_check.value);
         ui.close();
@@ -495,16 +506,15 @@ if(app.documents.length > 0)
             
             var num_nodes = args[0];
             var node_length = args[1];
-            var angle = args[2];
-            var slide = args[3];
-            var input = args[4];
+            var slide = args[2];
+            var input = args[3];
             
             if(input)
             {
                 invert = !invert;
             }
             
-            p = add_notches(p, num_nodes, node_length, angle, slide, invert);
+            p = add_leaves(p, num_nodes, node_length,slide, invert);
             
             unparse_path(selected_paths[j], p);
         }

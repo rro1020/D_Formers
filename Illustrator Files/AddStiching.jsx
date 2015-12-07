@@ -121,7 +121,6 @@ function parse_pnt(pnt)
 {
     with(pnt)
     {
-        if (pointType == PointType.CORNER) return [anchor, anchor, anchor, PointType.SMOOTH];
         return [anchor, leftDirection, rightDirection, pointType];
     }
 }
@@ -136,14 +135,20 @@ function parse_path(path)
     
     for(var j = 0; j < pnts.length; j++)
     {
-        if(pnts[j][0] == pnts[j][1])
+        if(pnts[j][3] == PointType.CORNER || (pnts[j][1][0] == pnts[j][2][0] && pnts[j][1][1] == pnts[j][2][1]))
         {
             var prev = (j - 1 + pnts.length) % pnts.length;
+            var next = (j + 1 + pnts.length) % pnts.length;
             
-            var ctrl_x = (pnts[j][0] - pnts[prev][0]) * 0.25 + pnts[prev][0];
-            var ctrl_y = (pnts[j][1] - pnts[prev][1]) * 0.25 + pnts[prev][1]; 
+            var ctrl_x = (pnts[j][0][0] - pnts[prev][0][0]) * 0.75 + pnts[prev][0][0];
+            var ctrl_y = (pnts[j][0][1] - pnts[prev][0][1]) * 0.75 + pnts[prev][0][1]; 
             
             pnts[j][1] = [ctrl_x, ctrl_y];
+            
+            var ctrl_x_r = (pnts[next][0][0] - pnts[j][0][0]) * 0.25 + pnts[j][0][0];
+            var ctrl_y_r = (pnts[next][0][1] - pnts[j][0][1]) * 0.25 + pnts[j][0][1]; 
+            
+            pnts[j][2] = [ctrl_x_r, ctrl_y_r];
         }
     }
     
@@ -192,13 +197,13 @@ function generate_points(p, n, slide)
     var path_length = 0;
     for(var i in seg_lengths) {path_length += seg_lengths[i];}
     
-    var target_dist = slide % (path_length / n);
-    
+    var target_dist = (path_length/n) * slide;
     var point_list = [];
     var test = 0.0;
     //alert("p length = " + p.length);
-    for(var i = 0; i < p.length; i++)
+    for(var i = 0; i < p.length + 1; i++)
     {
+        i %= p.length;
         var next = (i + 1) % p.length;
         var curr_seg_len = segmentLength(p[i], p[next]);
         //alert("current = " + curr_seg_len);
@@ -349,10 +354,9 @@ function offset_entire_path(p, o, invert)
         var unit_vec_a = [(dx_l/(Math.sqrt(dx_l * dx_l + dy_l * dy_l))), (dy_l/(Math.sqrt(dx_l * dx_l + dy_l * dy_l)))];
         var unit_vec_b = [(op_dx_r/(Math.sqrt(op_dx_r * op_dx_r + op_dy_r * op_dy_r))), (op_dy_r/(Math.sqrt(op_dx_r * op_dx_r + op_dy_r * op_dy_r)))];
         
-        var tangent = [(unit_vec_a[0] + unit_vec_b[0])/2, (unit_vec_a[1] + unit_vec_b[1])/2];
+        var tangent = [(unit_vec_a[0] + unit_vec_b[0]), (unit_vec_a[1] + unit_vec_b[1])];
         
         var p_slope = perpendicularSlope(tangent);
-        
         var new_pt = computePointAlongLine(p_slope, p[j], o);
         
         var prev = ((j - 1) + p.length) % p.length;
@@ -368,11 +372,7 @@ function offset_entire_path(p, o, invert)
         
         var vec1 = [(new_left_ctrl[0] - new_pt[0]), (new_left_ctrl[1] - new_pt[1])];
         var norm1 = Math.sqrt(((vec1[0] * vec1[0]) + (vec1[1] * vec1[1])));
-        var norm2 = Math.sqrt(((dx_l * dx_l) + (dy_l * dy_l)));
-        var dot_prod = vec1[0] * dx_l + vec1[1] * dy_l;
-        var angle = Math.acos(dot_prod / (norm1 * norm2)) * 0.5;
-        var tmp_slope = rotateSlope(vec1, 360 - (angle * (180 / Math.PI)));
-        new_left_ctrl = computePointAlongLine(tmp_slope, [new_pt], norm1);
+        new_left_ctrl = computePointAlongLine([dx_l, dy_l], [new_pt], norm1);
         
         var vec_n_c = [(p[j][2][0] - p[next][1][0]), (p[j][2][1] - p[next][1][1])];
         var norm1 = Math.sqrt(((vec_n_c[0] * vec_n_c[0]) + (vec_n_c[1] * vec_n_c[1])));
@@ -384,15 +384,11 @@ function offset_entire_path(p, o, invert)
         
         var vec1 = [(new_right_ctrl[0] - new_pt[0]), (new_right_ctrl[1] - new_pt[1])];
         var norm1 = Math.sqrt(((vec1[0] * vec1[0]) + (vec1[1] * vec1[1])));
-        var norm2 = Math.sqrt(((dx_r * dx_r) + (dy_r * dy_r)));
-        var dot_prod = vec1[0] * dx_r + vec1[1] * dy_r;
-        var angle = Math.acos(dot_prod / (norm1 * norm2));
-        var tmp_slope = rotateSlope(vec1, (angle * (180 / Math.PI)));
-        new_right_ctrl = computePointAlongLine(tmp_slope, [new_pt], norm1);
+        new_right_ctrl = computePointAlongLine([dx_r, dy_r], [new_pt], norm1);
         
         p[j][0] = new_pt;
-        p[j][1] = new_left_ctrl;
-        p[j][2] = new_right_ctrl;
+        p[j][1] = [new_pt[0] + dx_l, new_pt[1] + dy_l];
+        p[j][2] = [new_pt[0] + dx_r, new_pt[1] + dy_r];
     }
     
     return p;
@@ -402,21 +398,55 @@ var args = [];
 
 function setUpUI()
 {
-    var ui = new Window("dialog", "Add Notches to Path");
+    var ui = new Window("dialog", "Add Stitching to Path");
+    
     
     var g1 = ui.add("group", undefined, "");
-    var st1 = g1.add("statictext", undefined, "Number of Notches: ");
+    g1.alignment = "column"
+    var st1 = g1.add("statictext", undefined, "Number of Holes: ");
     var quantity = g1.add("edittext", undefined, "");
     
-    //add more arguements
+    var g2 = ui.add("group", undefined, "");
+    var st2 = g2.add("statictext", undefined, "Diameter of Holes: ");
+    var hole_diameter = g2.add("edittext", undefined, "");
+    
+    var g3 = ui.add("group", undefined, "");
+    
+    var st3 = g3.add("statictext", undefined, "Distance from Path: ");
+    var dist = g3.add("edittext", undefined, "");
+    
+    var g4 = ui.add("group", undefined, "");
+    var st4 = g4.add("statictext", undefined, "Slide along Path: ");
+    var slide = g4.add("slider", undefined, "");
+    var txt_slide = g4.add("edittext", undefined, "0.00")
+    
+    var g5 = ui.add("group", undefined, "");
+    var invert_check = g5.add("checkbox", undefined, "Invert? ");
     
     var closeBtn = ui.add("button", undefined, "Apply");
     
-    args = [];
-    
+    slide.onChanging = function(){
+        txt_slide.text = "" + (slide.value / 100.0).toFixed(2);
+        if(slide.value == 0 || slide.value == 100)
+        {
+            txt_slide.text += ".00"
+        }
+    }
+    txt_slide.onChanging = function(){
+        var v = parseFloat(txt_slide.text);
+        slide.value = v * 100;
+    }
     closeBtn.onClick = function(){
+        args = [];
+        args.push(parseFloat(quantity.text));
+        args.push(parseFloat(hole_diameter.text));
+        args.push(parseFloat(dist.text));
+        args.push((slide.value/100).toFixed(2));
+        args.push(invert_check.value);
+        alert(args)
         ui.close();
     }
+    
     ui.show();
 }
 
@@ -438,7 +468,6 @@ if(app.documents.length > 0)
         for(var j = 0; j < selected_paths.length; j++)
         {
             var p = parse_path(selected_paths[j]);
-            
             var invert = false
             
             if(selected_paths[j].polarity == PolarityValues.NEGATIVE)
@@ -446,15 +475,13 @@ if(app.documents.length > 0)
                 invert = true;
             }
             
-            //setUpUI();
-            
-            var num_nodes = 20;
-            var node_length = 20;
-            var diameter = 5;
-            var slide = 0;
-            var input = false;
-            
-            //alert(selected_paths[j].name);
+            setUpUI();
+
+            var num_nodes = args[0];
+            var node_length = args[1];
+            var diameter = args[2];
+            var slide = args[3];
+            var input = args[4];
             
             if(input)
             {
@@ -464,7 +491,7 @@ if(app.documents.length > 0)
             add_stiches(p, num_nodes, node_length, diameter, slide);
             
             var new_p = parse_path(selected_paths[j]);
-            new_p = offset_entire_path(new_p, node_length, invert);
+            new_p = offset_entire_path(p, node_length, invert);
             
             unparse_path(selected_paths[j], new_p);
         }
