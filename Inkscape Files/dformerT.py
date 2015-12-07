@@ -175,6 +175,11 @@ class Length(inkex.Effect):
                         dest="paraTooth", default=5,
                         help="Scale Factor (Drawing:Real Length)")
                         
+        self.OptionParser.add_option("-l", "--slideT",
+                        action="store", type="float", 
+                        dest="slideT", default="0",
+                        help="Adjust Slide")
+                        
         self.OptionParser.add_option("--tab",
                         action="store", type="string", 
                         dest="tab", default="desc",

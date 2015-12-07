@@ -54,10 +54,6 @@
   * The Unit Drop Box controls the units of measure the other Arguments measure by
   * The Diameter/Angle field is a secondary parameter that changes based on build type, specifying the radius or angle used by them  </_param>
 		</page>
-		<page name = "dformtestpage" _gui-text="D-Form Help">
-			<_param name="dformhelp" type="description" xml:space="preserve">DFORM Testing! This is a test page!  
-            Explain D-Forms here? </_param> 
-		</page> 
 	</param>
 	<effect>
 		<object-type>path</object-type>
