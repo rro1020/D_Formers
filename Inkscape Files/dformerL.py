@@ -217,6 +217,11 @@ class Length(inkex.Effect):
                         dest="offsetL", default=5,
                         help="Offset")
                         
+        self.OptionParser.add_option("-l", "--slideL",
+                        action="store", type="float", 
+                        dest="slideL", default="0",
+                        help="Adjust Slide")
+                        
         self.OptionParser.add_option("--tab",
                         action="store", type="string", 
                         dest="tab", default="desc",

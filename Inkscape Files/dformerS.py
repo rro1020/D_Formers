@@ -151,6 +151,11 @@ class Length(inkex.Effect):
                         action="store", type="float", 
                         dest="paraStitch", default=5,
                         help="Scale Factor (Drawing:Real Length)")
+                        
+        self.OptionParser.add_option("-l", "--slideS",
+                        action="store", type="float", 
+                        dest="slideS", default="0",
+                        help="Adjust Slide")
 
         self.OptionParser.add_option("--tab",
                         action="store", type="string", 
