@@ -101,9 +101,13 @@ def csplength(csp):
             total += l
     return lengths, total
     
-def addNotches(path, n, offset, angle, document):
-    points = dformer.generatePoints(path, 2 * n)
-    #points = dformer.generatePointsWithOffset(path, 12, 2 * n)
+def addNotches(path, n, offset, slideRatio, angle, document):  
+    points = dformer.generatePoints(path, slideRatio, 2 * n)
+    #if slideRatio > 0: 
+    #    points = dformer.generatePoints(path, 2 * n)
+    #else: 
+    #    points = dformer.generatePointsWithOffset(path, slideRatio, 2 * n)    
+    
     pt_pairs = dformer.findPointPairs(points)
     #inkex.errormsg("pt_pairs = " + str(len(pt_pairs)))
     
@@ -179,7 +183,7 @@ class Length(inkex.Effect):
                         action="store", type="float", 
                         dest="slideT", default="0",
                         help="Adjust Slide")
-                        
+
         self.OptionParser.add_option("--tab",
                         action="store", type="string", 
                         dest="tab", default="desc",
@@ -268,8 +272,8 @@ class Length(inkex.Effect):
         
         points = []
         
-        addNotches(obj_nodes[id_min], self.options.pointsT, self.options.offsetT, self.options.paraTooth,doc)
-        addNotches(obj_nodes[id_max], self.options.pointsT, self.options.offsetT, self.options.paraTooth,doc)
+        addNotches(obj_nodes[id_min], self.options.pointsT, self.options.offsetT, self.options.slideT, self.options.paraTooth, doc)
+        addNotches(obj_nodes[id_max], self.options.pointsT, self.options.offsetT, self.options.slideT, self.options.paraTooth, doc)
 
         
 if __name__ == '__main__':

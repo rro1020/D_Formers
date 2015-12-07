@@ -1,9 +1,8 @@
 #!/usr/bin/env python 
 '''
-This extension module can measure arbitrary path and object length
-It adds text to the selected path containing the length in a given unit.
-Area and Center of Mass calculated using Green's Theorem:
-http://mathworld.wolfram.com/GreensTheorem.html
+This extension module contains all helper functions for all 
+dformer connectors.  This project was assigned to us for 
+Texas A&M University's CSCE 482 Course.  
 
 Copyright (C) 2010 Alvin Penner
 Copyright (C) 2006 Georg Wiora
@@ -24,12 +23,6 @@ You should have received a copy of the GNU General Public License
 along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-TODO:
- * should use the standard attributes for text
- * Implement option to keep text orientation upright 
-    1. Find text direction i.e. path tangent,
-    2. check direction >90 or <-90 Degrees
-    3. rotate by 180 degrees around text center
 ''' 
 
 # standard library
@@ -395,10 +388,8 @@ def rescalePath(path, n, oriCenterPoint, offset, diameter, document):
     perimeter = read_stored_info("pathlength", path)
     path.set('transform', 'scale(' + str(1 + offset/100) + ' ' + str(1 + offset/100) +')')
     fuseTransform(path) 
-    #inkex.errormsg("orignalOrigin = " + str(originalOrigin))
     
     newPath = cubicsuperpath.parsePath(path.get('d'))
-    #inkex.errormsg("\nNew Path\n" + str(newPath))
     #newOrigin = originParse(path)
     
     #mat = simpletransform.composeParents(node, [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]])
@@ -409,9 +400,6 @@ def rescalePath(path, n, oriCenterPoint, offset, diameter, document):
     #newPoints = generatePoints(newPath, n)
     
     
-    #slengths, stotal = csplength(newPath)
-    #inkex.errormsg("slength\n" + str(slengths)) 
-    #inkex.errormsg("\nstotal\n" + str(stotal)) 
     #save the path length and segment lengths in the document 
     path.set('pathlength', str(stotal))
     tmp = ''
@@ -427,8 +415,6 @@ def rescalePath(path, n, oriCenterPoint, offset, diameter, document):
     for p in newPointList: 
         drawCircle(p, diameter/2, document)
     
-    #inkex.errormsg("newOrigin = " + str(newOrigin))
-    #transformOrigin = [(originalOrigin[0] - newOrigin[0] / (1 + offset/400)), (originalOrigin[1] - newOrigin[1])]
     transformOrigin = [(oriCenterPoint[0] - newCenterPoint[0]), (oriCenterPoint[1] - newCenterPoint[1])]
     inkex.errormsg("transformOrigin = " + str(transformOrigin))
     path.set('transform', 'translate(' + str(transformOrigin[0]) + ' ' + str(transformOrigin[1]) +')')
@@ -444,94 +430,9 @@ def read_stored_info(type, obj):
         return tmp
     return None
 
-def generatePointsWithOffset(obj, offset, n):
+def generatePoints(obj, offset, n):
     pointList = []  
-    targetDist = offset % read_stored_info("pathlength", obj)/ n 
-    segmentLengths = [0.0] + read_stored_info("segmentlengths", obj)[::-1]
-    
-    mat = simpletransform.composeParents(obj, [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]])
-    p = cubicsuperpath.parsePath(obj.get('d'))
-    simpletransform.applyTransformToPath(mat, p)
-    
-    segments = p[0]
-    new_path = segments
-    
-    i = 0
-    count = 0
-    total = 0
-    
-    while i < len(segments) - 1: 
-        if segmentLengths[i] == targetDist:
-            pointList += [segments[i][1]]
-            targetDist = read_stored_info("pathlength", obj)/ n
-            #raise Exception(str(pointList))
-
-        elif targetDist > segmentLengths[i] or segmentLengths[i] == 0:
-            #raise Exception(str(targetDist))
-            targetDist -= segmentLengths[i]
-
-        else:
-            t = targetDist / float(segmentLengths[i]) 
-            
-            #inkex.errormsg("t = " + str(t))
-            #inkex.errormsg("targetPt = " + str(bezmisc.bezierpointatt((segments[i - 1][1], segments[i - 1][2], segments[i][0], segments[i][1]),t)))
-             
-            t1 = segments[i-1][1]
-            t2 = segments[i][1]
-            
-            #sub1, sub2 = bezmisc.beziersplitatt((segments[i-1][-2], segments[i-1][-1], segments[i][0], segments[i][1]), t)
-            pathList = addnodes.cspbezsplitatlength(segments[i-1], segments[i], t,tolerance=0.00001)
-            pointList += [pathList[1][1]]
-            #inkex.errormsg("added point " + str(pointList[-1]))
-            prev = segments[:i - 1]
-            next = segments[i + 1:]
-            segments = prev + pathList + next
-            #inkex.errormsg("Segments[\n" + str(segments) + "\n]")
-            
-            #len1 = bezmisc.bezierlength((pathList[0][1][:], pathList[0][2][:], pathList[1][0][:], pathList[1][1][:]),tolerance=0.00001)
-            #len2 = bezmisc.bezierlength((pathList[1][1][:], pathList[1][2][:], pathList[2][0][:], pathList[2][1][:]),tolerance=0.00001)
-            
-            len1 = targetDist
-            len2 = segmentLengths[i] - targetDist
-            
-            if abs((len1 + len2) - segmentLengths[i]) >= 0.0001:
-                raise Exception("There is an issue with the bezier split function. (" + str(len1 + len2) + " vs. " + str(segmentLengths[i]) + ")")
-                
-            
-            #inkex.errormsg("Split Point = " + str(pointList[-1]))
-            #inkex.errormsg("len1 = " + str(len1) + "\nlen2 = " + str(len2) + " \nsegmentLengths[i] = " + str(segmentLengths[i]))
-            
-            prev = segmentLengths[:i]
-            next = segmentLengths[i+1:]
-            #inkex.errormsg("Pathlist = " + str(pathList))
-            segmentLengths = prev + [len1, len2] + next
-        
-            #obj.set('d', cubicsuperpath.formatPath([segments]))
-            #segments = cubicsuperpath.parsePath(obj.get('d'))[0]
-            targetDist = read_stored_info("pathlength", obj)/n
-            
-            
-            count += 1
-        if(len(pointList) == n):
-            break;
-        i += 1
-    
-    pointList += [segments[0][1]]
-    
-    if abs(sum(segmentLengths) - read_stored_info("pathlength", obj)) >= 0.001:
-        #inkex.errormsg(str(sum(segmentLengths) - read_stored_info("pathlength", obj)))
-        raise Exception("Internal Error: The total length of the new path does not equal the original path.")
-    obj.set('d', cubicsuperpath.formatPath([segments[:-1]])+'Z')
-    obj.set('segmentlengths', str(segmentLengths))
-    
-    #if len(pointList) != n:
-    #    raise Exception("Internal Error: The algorithm did not find the required number of points (" + str(len(pointList)) + " out of " + str(n) + ").")
-    
-    return pointList 
-	
-def generatePoints(obj, n):
-    pointList = []  
-    targetDist = read_stored_info("pathlength", obj)/ n 
+    targetDist = offset * read_stored_info("pathlength", obj)/ n 
     segmentLengths = [0.0] + read_stored_info("segmentlengths", obj)[::-1]
     
     mat = simpletransform.composeParents(obj, [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]])
@@ -549,32 +450,21 @@ def generatePoints(obj, n):
         if segmentLengths[i] == targetDist:
             pointList += [segments[i][1]]
             targetDist = read_stored_info("pathlength", obj)/ n
-            #raise Exception(str(pointList))
 
         elif targetDist > segmentLengths[i] or segmentLengths[i] == 0:
-            #raise Exception(str(targetDist))
             targetDist -= segmentLengths[i]
 
         else:
             t = targetDist / float(segmentLengths[i]) 
             
-            #inkex.errormsg("t = " + str(t))
-            #inkex.errormsg("targetPt = " + str(bezmisc.bezierpointatt((segments[i - 1][1], segments[i - 1][2], segments[i][0], segments[i][1]),t)))
-             
             t1 = segments[i-1][1]
             t2 = segments[i][1]
             
-            #sub1, sub2 = bezmisc.beziersplitatt((segments[i-1][-2], segments[i-1][-1], segments[i][0], segments[i][1]), t)
             pathList = addnodes.cspbezsplitatlength(segments[i-1], segments[i], t,tolerance=0.00001)
             pointList += [pathList[1][1]]
-            #inkex.errormsg("added point " + str(pointList[-1]))
             prev = segments[:i - 1]
             next = segments[i + 1:]
             segments = prev + pathList + next
-            #inkex.errormsg("Segments[\n" + str(segments) + "\n]")
-            
-            #len1 = bezmisc.bezierlength((pathList[0][1][:], pathList[0][2][:], pathList[1][0][:], pathList[1][1][:]),tolerance=0.00001)
-            #len2 = bezmisc.bezierlength((pathList[1][1][:], pathList[1][2][:], pathList[2][0][:], pathList[2][1][:]),tolerance=0.00001)
             
             len1 = targetDist
             len2 = segmentLengths[i] - targetDist
@@ -604,14 +494,10 @@ def generatePoints(obj, n):
     pointList += [segments[0][1]]
     
     if abs(sum(segmentLengths) - read_stored_info("pathlength", obj)) >= 0.001:
-        #inkex.errormsg(str(sum(segmentLengths) - read_stored_info("pathlength", obj)))
         raise Exception("Internal Error: The total length of the new path does not equal the original path.")
     obj.set('d', cubicsuperpath.formatPath([segments[:-1]])+'Z')
     obj.set('segmentlengths', str(segmentLengths))
-    
-    #if len(pointList) != n:
-    #    raise Exception("Internal Error: The algorithm did not find the required number of points (" + str(len(pointList)) + " out of " + str(n) + ").")
-    
+      
     return pointList 
 
 def drawColoredCircle(tarPoint, radius, doc, color):
@@ -871,12 +757,9 @@ class Length(inkex.Effect):
         if self.options.tab == "\"stitch\"":
             addStitching(obj_nodes[id_min], self.options.points, self.options.offset, self.options.paraStitch, doc)
             addStitching(obj_nodes[id_max], self.options.points, self.options.offset, self.options.paraStitch, doc)
-            #printValue(self.options.tab, self)
         elif self.options.tab == "\"tooth\"":
             addNotches(obj_nodes[id_min], self.options.points, self.options.offset, False, self.options.paraTooth,doc)
-            #printValue(self.options.tab, self)
             addNotches(obj_nodes[id_max], self.options.points, self.options.offset, True, self.options.paraTooth,doc)
-            #printValue(self.options.tab, self)
         elif self.options.tab == "\"leaf\"": 
             addLeaves(obj_nodes[id_min], self.options.points, self.options.offset, self.options.paraLeaf, doc)
             addLeaves(obj_nodes[id_max], self.options.points, self.options.offset, self.options.paraLeaf, doc)

@@ -6,9 +6,8 @@
 	<dependency type="executable" location="extensions">inkex.py</dependency>
 	<param name="tab" type="notebook">
 		<page name="leaf" _gui-text="Leaves Method">
-            <_param name="argue" type="description" xml:space="preserve">Variable:</_param>
-            <param name="pointsL" type="int" min="1" max="100" _gui-text="Number of Connectors:">20</param>
-			<param name="offsetL" type="float" min="1e-8" max="1e10" _gui-text="Offset:">20</param>
+            <param name="pointsL" type="int" min="1" max="100" _gui-text="Number of Leaves:">20</param>
+			<param name="offsetL" type="float" min="1e-8" max="1e10" _gui-text="Distance from Path:">20</param>
             <param name="slideL" type="float" appearance="full" min="0" max="1" indent="0" _gui-text="Sliding">0</param>
 		</page>
 	</param>

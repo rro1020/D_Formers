@@ -101,8 +101,8 @@ def csplength(csp):
             total += l
     return lengths, total
 
-def addLeaves(path, n, offset, document):
-    points = dformer.generatePoints(path, 2 * n)
+def addLeaves(path, n, offset, slideRatio, document):
+    points = dformer.generatePoints(path, slideRatio, 2 * n)
     pt_pairs = dformer.findPointPairs(points)
     
     p = cubicsuperpath.parsePath(path.get('d'))[0]
@@ -139,14 +139,6 @@ def addLeaves(path, n, offset, document):
         leafMidPoint = dformer.getMidPoint(ab_MidPoint, ctrl1)
         leftSidePoint = dformer.computePointAlongLine(slope, leafMidPoint, -dist/2)
         before[-1][2] = list(leftSidePoint)
-        
-		#drawCircle is used for testing purposes 
-        #drawColoredCircle(before[-1][0], offset/20, document, 'red')
-        #drawColoredCircle(before[-1][1], offset/20, document, 'orange')
-        #drawColoredCircle(before[-1][2], offset/20, document, 'yellow')
-        #drawColoredCircle(ctrl1, offset/20, document, 'green')
-        #drawColoredCircle(c, offset/20, document, 'blue')
-        #drawColoredCircle(ctrl2, offset/20, document, 'purple')
 
         curve_at_c = [list(ctrl1), list(c), list(ctrl2)]
 
@@ -155,9 +147,6 @@ def addLeaves(path, n, offset, document):
         after[0][0] = list(rightSidePoint)
         after[0][1] = list(b)
         after[0][2] = after[1][0]
-        #drawColoredCircle(after[0][0], offset/20, document, 'pink')
-        #drawColoredCircle(after[0][1], offset/20, document, 'black')
-        #drawColoredCircle(after[0][2], offset/20, document, 'white')
 		
         p = before + [curve_at_c] + after
 
@@ -216,11 +205,11 @@ class Length(inkex.Effect):
                         action="store", type="float", 
                         dest="offsetL", default=5,
                         help="Offset")
-                        
+
         self.OptionParser.add_option("-l", "--slideL",
                         action="store", type="float", 
                         dest="slideL", default="0",
-                        help="Adjust Slide")
+                        help="Adjust Slide")						
                         
         self.OptionParser.add_option("--tab",
                         action="store", type="string", 
@@ -309,30 +298,10 @@ class Length(inkex.Effect):
                 # lenstr = locale.format("%(len)25."+str(prec)+"f",{'len':round(stotal*factor*self.options.scale,prec)}).strip()
         
         points = []
-        #points = generatePoints(obj_nodes[id_min], self.options.points)
-        #points = generatePoints(obj_nodes[id_max], self.options.points)
-        addLeaves(obj_nodes[id_min], self.options.pointsL, self.options.offsetL, doc)
-        addLeaves(obj_nodes[id_max], self.options.pointsL, self.options.offsetL, doc)
-        
-        #printValue(self.options.tab, self)
-        
-        # leaf code
-        #printValue(self.options.tab, self)
-        
-        #inkex.errormsg(str(points))
-        #inkex.errormsg(str(len(points)))
-        
-        #buildType Radio Button Here
-        
-    #q = inkex.getElementById(doc, obj_nodes[id_min]); 
-        
 
-    # def addCross(self, node, x, y, scale):
-        # l = 3*scale         # 3 pixels in document units
-        # node.set('d', 'm %s,%s %s,0 %s,0 m %s,%s 0,%s 0,%s' % (str(x-l), str(y), str(l), str(l), str(-l), str(-l), str(l), str(l)))
-        # node.set('style', 'stroke:#000000;fill:none;stroke-width:%s' % str(0.5*scale))
-
-
+		#apply the leaves method to both paths 
+        addLeaves(obj_nodes[id_min], self.options.pointsL, self.options.offsetL, self.options.slideL, doc)
+        addLeaves(obj_nodes[id_max], self.options.pointsL, self.options.offsetL, self.options.slideL, doc)    
 
         
 if __name__ == '__main__':

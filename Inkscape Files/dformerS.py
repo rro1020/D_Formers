@@ -101,12 +101,10 @@ def csplength(csp):
             total += l
     return lengths, total
 
-def addStitching(path, n, offset, diameter, document): 
-    points = dformer.generatePoints(path, n) 
-    #pointPairs = findPointPairs(points)
+def addStitching(path, n, offset, slideRatio, diameter, document): 
+    points = dformer.generatePoints(path, slideRatio, n) 
     
     parsedPath = cubicsuperpath.parsePath(path.get('d'))[0]
-    #inkex.errormsg("Parsed Path\n" + str(parsedPath))
     i = 1
     
     for p in points:   
@@ -117,12 +115,13 @@ def addStitching(path, n, offset, diameter, document):
             start_pt = parsedPath[i - 1][1]
 
         #x, y = bezmisc.bezierslopeatt((parsedPath[i-1][1], parsedPath[i-1][2], parsedPath[i][0], parsedPath[i][1]), 0)
-        x, y = bezmisc.bezierslopeatt((parsedPath[i-1][0], parsedPath[i-1][1], parsedPath[i-1][2], parsedPath[i][1]), 0)
+        x, y = bezmisc.bezierslopeatt((parsedPath[i-1][0], parsedPath[i-1][1], parsedPath[i-1][2], parsedPath[i][0]), 0)
         pSlope = dformer.perpendicularSlope((x, y))  
         index = points.index(p)
         newPoint = dformer.computePointAlongLine(pSlope, p, offset)
         #drawCircle(p, diameter/2, document)
-        dformer.drawCircle(newPoint, diameter/2, document)
+        if index < len(points) - 1:
+            dformer.drawCircle(newPoint, diameter/2, document)
   
 class Length(inkex.Effect):
     def __init__(self):
@@ -151,7 +150,7 @@ class Length(inkex.Effect):
                         action="store", type="float", 
                         dest="paraStitch", default=5,
                         help="Scale Factor (Drawing:Real Length)")
-                        
+
         self.OptionParser.add_option("-l", "--slideS",
                         action="store", type="float", 
                         dest="slideS", default="0",
@@ -205,8 +204,6 @@ class Length(inkex.Effect):
                     obj_lengths += [stotal]
                     obj_ids += [id]
                     obj_nodes += [node] 
-                # Format the length as string
-                # lenstr = locale.format("%(len)25."+str(prec)+"f",{'len':round(stotal*factor*self.options.scale,prec)}).strip()
         
         id_min = 0
         id_max = 1
@@ -214,7 +211,6 @@ class Length(inkex.Effect):
             id_min = 1
             id_max = 0
 
-        #verifyDocument(doc)
         obj_lengths = []  
         obj_ids = []
         obj_nodes = []
@@ -236,15 +232,15 @@ class Length(inkex.Effect):
                     tmp = tmp[:-1] #remove the space at the end
                     node.set('segmentlengths', tmp)
                     
-                    # self.group = inkex.etree.SubElement(node.getparent(),inkex.addNS('text','svg'))
                     obj_lengths += [stotal]
                     obj_ids += [id]
                     obj_nodes += [node] 
         
         points = []
         
-        addStitching(obj_nodes[id_min], self.options.pointsS, self.options.offsetS, self.options.paraStitch, doc) 
-        addStitching(obj_nodes[id_max], self.options.pointsS, self.options.offsetS, self.options.paraStitch, doc) 
+		#applies the stitching methods to both paths 
+        addStitching(obj_nodes[id_min], self.options.pointsS, self.options.offsetS, self.options.slideS, self.options.paraStitch, doc) 
+        addStitching(obj_nodes[id_max], self.options.pointsS, self.options.offsetS, 0, self.options.paraStitch, doc) 
         
 
 
