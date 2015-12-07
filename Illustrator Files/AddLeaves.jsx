@@ -428,37 +428,41 @@ function add_leaves(p, n, o, slide, invert)
 }
 
 var args = [];
+var skip = false;
 
 function setUpUI()
 {
     var ui = new Window("dialog", "Add Stitching to Path");
     
+    skip = true;
     
     var g1 = ui.add("group", undefined, "");
     g1.alignment = "column"
     var st1 = g1.add("statictext", undefined, "Number of Leaves: ");
-    var quantity = g1.add("edittext", undefined, "");
+    var quantity = g1.add("edittext", undefined, "0");
+    quantity.characters = 5;
     
     var g2 = ui.add("group", undefined, "");
     var st2 = g2.add("statictext", undefined, "Length of Leaves: ");
-    var notch_length = g2.add("edittext", undefined, "");
+    var notch_length = g2.add("edittext", undefined, "0.00");
+    notch_length.characters = 5;
     
     var g4 = ui.add("group", undefined, "");
     var st4 = g4.add("statictext", undefined, "Slide along Path: ");
     var slide = g4.add("slider", undefined, "");
-    var txt_slide = g4.add("edittext", undefined, "0.00")
+    var txt_slide = g4.add("edittext", undefined, "0.00");
+    txt_slide.characters = 5;
     
     var g5 = ui.add("group", undefined, "");
     var invert_check = g5.add("checkbox", undefined, "Invert? ");
+    invert_check.characters = 5;
     
-    var closeBtn = ui.add("button", undefined, "Apply");
+    var g6 = ui.add("group", undefined, "");
+    var closeBtn = g6.add("button", undefined, "Apply");
+    var skipBtn = g6.add("button", undefined, "Skip");
     
     slide.onChanging = function(){
         txt_slide.text = "" + (slide.value / 100.0).toFixed(2);
-        if(slide.value == 0 || slide.value == 100)
-        {
-            txt_slide.text += ".00"
-        }
     }
     txt_slide.onChanging = function(){
         var v = parseFloat(txt_slide.text);
@@ -466,15 +470,26 @@ function setUpUI()
     }
     closeBtn.onClick = function(){
         args = [];
-        args.push(parseFloat(quantity.text));
+        skip = false;
+        args.push(parseInt(quantity.text));
         args.push(parseFloat(notch_length.text));
-        args.push((slide.value/100).toFixed(2));
+        args.push(parseFloat((slide.value/100).toFixed(2)));
         args.push(invert_check.value);
+        ui.close();
+    }
+    skipBtn.onClick = function()
+    {
+        skip = true;
         ui.close();
     }
     
     ui.show();
 }
+
+function isInteger(x) { return Math.floor(x) === x; }
+function isFloat(x) { return !!(x % 1); }
+function isPositive(x) { return x >= 0.0; }
+
 
 if(app.documents.length > 0)
 {
@@ -493,21 +508,60 @@ if(app.documents.length > 0)
         
         for(var j = 0; j < selected_paths.length; j++)
         {
-            p = parse_path(selected_paths[j]);
+            
             
             var invert = false
             
             if(selected_paths[j].polarity == PolarityValues.NEGATIVE)
             {
-                invert = true;
+                selected_paths.reverse = true;
             }
+            p = parse_path(selected_paths[j]);
+            var valid = false;
+            var num_nodes;
+            var node_length;
+            var slide;
+            var input;
             
-            setUpUI();
+            var first_time = true;
+            skip = false;
+            var error_msg = "";
+            while(!valid && !skip)
+            {
+                if(!first_time)
+                {
+                    alert(error_msg);
+                }
+                error_msg = "";
+                setUpUI();
+                valid = true;
+                num_nodes = args[0];
+                if(!isInteger(num_nodes) || !isPositive(num_nodes) || num_nodes == 0)
+                {
+                    valid = false;
+                    error_msg += "Number of Notches: Please enter a positive integer.\n";
+                }
+                node_length = args[1];
+                if((!isInteger(node_length) && !isFloat(node_length)) || !isPositive(node_length))
+                {
+                    valid = false;
+                    error_msg += "Length of Nodes: Please enter a non-negative number.\n";
+                }
+                slide = args[2];
+                if((!isInteger(slide) && !isFloat(slide)) || !isPositive(slide))
+                {
+                    valid = false;
+                    error_msg += "Slide: Please enter a non-negative number.\n";
+                }
+                input = args[3];
+                first_time = false;
             
-            var num_nodes = args[0];
-            var node_length = args[1];
-            var slide = args[2];
-            var input = args[3];
+            }
+
+            if(skip)
+            {
+                continue;
+            }
             
             if(input)
             {
@@ -518,5 +572,13 @@ if(app.documents.length > 0)
             
             unparse_path(selected_paths[j], p);
         }
+        if(selected_paths.length == 0)
+        {
+            alert("Please select one or more path objects.")
+        }
     }
+}
+else
+{
+    alert("Please create a new document.");
 }

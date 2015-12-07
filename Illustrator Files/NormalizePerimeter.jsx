@@ -55,13 +55,23 @@ if(app.documents.length > 0)
         {
             selectedPaths.reverse();
         }
-        
-        targetLength = selectedPaths[selectedPaths.length - 1].length;
-        
-        for(var i = 0; i < selectedPaths.length; i++)
+        if(selectedPaths.length > 0)
         {
-            scale = (targetLength / selectedPaths[i].length) * 100;
-            selectedPaths[i].resize(scale, scale);
+            targetLength = selectedPaths[selectedPaths.length - 1].length;
+        
+            for(var i = 0; i < selectedPaths.length; i++)
+            {
+                scale = (targetLength / selectedPaths[i].length) * 100;
+                selectedPaths[i].resize(scale, scale);
+            }
+        }
+        else
+        {
+            alert("Please select one or more path objects.")
         }
     }
+}
+else
+{
+    alert("Please create a new document.");
 }

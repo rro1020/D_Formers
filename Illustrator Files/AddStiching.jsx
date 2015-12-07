@@ -135,7 +135,7 @@ function parse_path(path)
     
     for(var j = 0; j < pnts.length; j++)
     {
-        if(pnts[j][3] == PointType.CORNER || (pnts[j][1][0] == pnts[j][2][0] && pnts[j][1][1] == pnts[j][2][1]))
+        if(pnts[j][3] == PointType.CORNER)
         {
             var prev = (j - 1 + pnts.length) % pnts.length;
             var next = (j + 1 + pnts.length) % pnts.length;
@@ -145,6 +145,22 @@ function parse_path(path)
             
             pnts[j][1] = [ctrl_x, ctrl_y];
             
+            var ctrl_x_r = (pnts[next][0][0] - pnts[j][0][0]) * 0.25 + pnts[j][0][0];
+            var ctrl_y_r = (pnts[next][0][1] - pnts[j][0][1]) * 0.25 + pnts[j][0][1]; 
+            
+            pnts[j][2] = [ctrl_x_r, ctrl_y_r];
+        }
+        if(pnts[j][1][0] == pnts[j][0][0] && pnts[j][1][1] == pnts[j][0][1])
+        {
+            var prev = (j - 1 + pnts.length) % pnts.length;
+            var ctrl_x = (pnts[j][0][0] - pnts[prev][0][0]) * 0.75 + pnts[prev][0][0];
+            var ctrl_y = (pnts[j][0][1] - pnts[prev][0][1]) * 0.75 + pnts[prev][0][1]; 
+            
+            pnts[j][1] = [ctrl_x, ctrl_y];
+        }
+        if(pnts[j][0][0] == pnts[j][2][0] && pnts[j][0][1] == pnts[j][2][1])
+        {
+            var next = (j + 1 + pnts.length) % pnts.length;
             var ctrl_x_r = (pnts[next][0][0] - pnts[j][0][0]) * 0.25 + pnts[j][0][0];
             var ctrl_y_r = (pnts[next][0][1] - pnts[j][0][1]) * 0.25 + pnts[j][0][1]; 
             
@@ -395,35 +411,43 @@ function offset_entire_path(p, o, invert)
 }
 
 var args = [];
+var skip = false;
 
 function setUpUI()
 {
     var ui = new Window("dialog", "Add Stitching to Path");
     
+    skip = true;
     
     var g1 = ui.add("group", undefined, "");
     g1.alignment = "column"
     var st1 = g1.add("statictext", undefined, "Number of Holes: ");
-    var quantity = g1.add("edittext", undefined, "");
+    var quantity = g1.add("edittext", undefined, "0");
+    quantity.characters = 5;
     
     var g2 = ui.add("group", undefined, "");
     var st2 = g2.add("statictext", undefined, "Diameter of Holes: ");
-    var hole_diameter = g2.add("edittext", undefined, "");
+    var hole_diameter = g2.add("edittext", undefined, "0.00");
+    hole_diameter.characters = 5;
     
     var g3 = ui.add("group", undefined, "");
-    
     var st3 = g3.add("statictext", undefined, "Distance from Path: ");
-    var dist = g3.add("edittext", undefined, "");
+    var dist = g3.add("edittext", undefined, "0.00");
+    dist.characters = 5;
     
     var g4 = ui.add("group", undefined, "");
     var st4 = g4.add("statictext", undefined, "Slide along Path: ");
-    var slide = g4.add("slider", undefined, "");
-    var txt_slide = g4.add("edittext", undefined, "0.00")
+    var slide = g4.add("slider", undefined, "0.00");
+    var txt_slide = g4.add("edittext", undefined, "0.00");
+    txt_slide.characters = 5;
     
     var g5 = ui.add("group", undefined, "");
     var invert_check = g5.add("checkbox", undefined, "Invert? ");
+    invert_check.characters = 5;
     
-    var closeBtn = ui.add("button", undefined, "Apply");
+    var g6 = ui.add("group", undefined, "");
+    var closeBtn = g6.add("button", undefined, "Apply");
+    var skipBtn = g6.add("button", undefined, "Skip");
     
     slide.onChanging = function(){
         txt_slide.text = "" + (slide.value / 100.0).toFixed(2);
@@ -437,18 +461,26 @@ function setUpUI()
         slide.value = v * 100;
     }
     closeBtn.onClick = function(){
-        args = [];
-        args.push(parseFloat(quantity.text));
+        args = [];skip = false;
+        args.push(parseInt(quantity.text));
         args.push(parseFloat(hole_diameter.text));
         args.push(parseFloat(dist.text));
-        args.push((slide.value/100).toFixed(2));
+        args.push(parseFloat((slide.value/100).toFixed(2)));
         args.push(invert_check.value);
-        alert(args)
+        ui.close();
+    }
+    skipBtn.onClick = function()
+    {
+        skip = true;
         ui.close();
     }
     
     ui.show();
 }
+
+function isInteger(x) { return Math.floor(x) === x; }
+function isFloat(x) { return !!(x % 1); }
+function isPositive(x) { return x >= 0.0; }
 
 if(app.documents.length > 0)
 {
@@ -467,7 +499,6 @@ if(app.documents.length > 0)
         
         for(var j = 0; j < selected_paths.length; j++)
         {
-            var p = parse_path(selected_paths[j]);
             var invert = false
             
             if(selected_paths[j].polarity == PolarityValues.NEGATIVE)
@@ -475,13 +506,59 @@ if(app.documents.length > 0)
                 invert = true;
             }
             
-            setUpUI();
+            var p = parse_path(selected_paths[j]);
+            var valid = false;
+            var num_nodes;
+            var node_length;
+            var diameter;
+            var slide;
+            var input;
+            
+            var first_time = true;
+            skip = false;
+            var error_msg = "";
+            while(!valid && !skip)
+            {
+                if(!first_time)
+                {
+                    alert(error_msg);
+                }
+                error_msg = "";
+                setUpUI();
+                valid = true;
+                num_nodes = args[0];
+                if(!isInteger(num_nodes) || !isPositive(num_nodes) || num_nodes == 0)
+                {
+                    valid = false;
+                    error_msg += "Number of Notches: Please enter a positive integer.\n";
+                }
+                node_length = args[2];
+                if((!isInteger(node_length) && !isFloat(node_length)) || !isPositive(node_length))
+                {
+                    valid = false;
+                    error_msg += "Length of Nodes: Please enter a non-negative number.\n";
+                }
+                diameter = args[1];
+                if((!isInteger(diameter) && !isFloat(diameter)))
+                {
+                    valid = false;
+                    error_msg += "Angle on Nodes: Please enter a non-negative number.\n";
+                }
+                slide = args[3];
+                if((!isInteger(slide) && !isFloat(slide)) || !isPositive(slide))
+                {
+                    valid = false;
+                    error_msg += "Slide: Please enter a non-negative number.\n";
+                }
+                input = args[4];
+                first_time = false;
+            
+            }
 
-            var num_nodes = args[0];
-            var node_length = args[1];
-            var diameter = args[2];
-            var slide = args[3];
-            var input = args[4];
+            if(skip)
+            {
+                continue;
+            }
             
             if(input)
             {
@@ -495,5 +572,13 @@ if(app.documents.length > 0)
             
             unparse_path(selected_paths[j], new_p);
         }
+        if(selected_paths.length == 0)
+        {
+            alert("Please select one or more path objects.")
+        }
     }
+}
+else
+{
+    alert("Please create a new document.");
 }
