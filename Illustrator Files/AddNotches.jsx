@@ -339,7 +339,6 @@ function add_notches(p, n, o, angle, slide, invert)
     
     for(var i = 0; i < pair_pts.length; i++)
     {
-        break;
         var a = pair_pts[i][0];
         var b = pair_pts[i][1];
         
