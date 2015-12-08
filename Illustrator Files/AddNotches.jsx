@@ -191,12 +191,22 @@ function split_curve(a, b, t)
     return [[start_pt,a[1],c12, a[3]], [c1234, c123, c234, PointType.SMOOTH], [end_pt,c34,b[2], b[3]]]
 }
 
+
+average = function(a) {
+  var r = {mean: 0, variance: 0, deviation: 0}, t = a.length;
+  for(var m, s = 0, l = t; l--; s += a[l]);
+  for(m = r.mean = s / t, l = t, s = 0; l--; s += Math.pow(a[l] - m, 2));
+  return r.deviation = Math.sqrt(r.variance = s / t), r;
+}
+
 function generate_points(p, n, slide)
 {
     var seg_lengths = segmentLengths(p);
     
     var path_length = 0;
     for(var i in seg_lengths) {path_length += seg_lengths[i];}
+    
+    var error = [];
     
     var target_dist = (path_length/n) * slide;
 
@@ -233,6 +243,8 @@ function generate_points(p, n, slide)
             p[next][1] = tmp[2][1];
             p.splice(i + 1,0, tmp[1]);
             
+            error.push((segmentLength(tmp[0], tmp[1]) + segmentLength(tmp[1], tmp[2]))/curr_seg_len);
+            
             point_list.push(tmp[1]);
 
             //seg_lengths[i] = segmentLength(tmp[0], tmp[1]);
@@ -249,6 +261,11 @@ function generate_points(p, n, slide)
         if(point_list.length == n)
             break;
     }
+    path_length = 0;
+    /* seg_lengths = segmentLengths(p);
+    for(var i in seg_lengths) {path_length += seg_lengths[i];}
+    alert("Average = " + average(error).mean + "\nvariance = " + average(error).deviation +"\nSTD = " + average(error).deviation + "\nn = " + error.length + "\npath length = " + path_length); */
+    
     return [p, point_list]
 }
 
@@ -322,7 +339,7 @@ function add_notches(p, n, o, angle, slide, invert)
     
     for(var i = 0; i < pair_pts.length; i++)
     {
-
+        break;
         var a = pair_pts[i][0];
         var b = pair_pts[i][1];
         
@@ -415,7 +432,7 @@ var skip = false;
 
 function setUpUI()
 {
-    var ui = new Window("dialog", "Add Stitching to Path");
+    var ui = new Window("dialog", "Add Leaves to Path");
     
     skip = true;
     

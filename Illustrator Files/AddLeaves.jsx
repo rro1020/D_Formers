@@ -199,7 +199,7 @@ function generate_points(p, n, slide)
     for(var i in seg_lengths) {path_length += seg_lengths[i];}
     
     var target_dist = (path_length/n) * slide;
-    alert(target_dist);
+    //alert(target_dist);
     var point_list = [];
     var test = 0.0;
     //alert("p length = " + p.length);
@@ -316,10 +316,10 @@ function add_leaves(p, n, o, slide, invert)
     
     p = tmp[0];
     pts = tmp[1];
-    alert("found pts = " + pts.length);
+    //alert("found pts = " + pts.length);
     pair_pts = findPointPairs(pts);
     
-    alert("pair lengths = " + pair_pts.length);
+    //alert("pair lengths = " + pair_pts.length);
     
     var j = 0;
     
@@ -432,29 +432,29 @@ var skip = false;
 
 function setUpUI()
 {
-    var ui = new Window("dialog", "Add Stitching to Path");
+    var ui = new Window("dialog", "Add Leaves to Path");
     
     skip = true;
     
     var g1 = ui.add("group", undefined, "");
     g1.alignment = "column"
-    var st1 = g1.add("statictext", undefined, "Number of Leaves: ");
+    var st1 = g1.add("statictext", undefined, "Number of leaves: ");
     var quantity = g1.add("edittext", undefined, "0");
     quantity.characters = 5;
     
     var g2 = ui.add("group", undefined, "");
-    var st2 = g2.add("statictext", undefined, "Length of Leaves: ");
+    var st2 = g2.add("statictext", undefined, "Length of each leaf: ");
     var notch_length = g2.add("edittext", undefined, "0.00");
     notch_length.characters = 5;
     
     var g4 = ui.add("group", undefined, "");
-    var st4 = g4.add("statictext", undefined, "Slide along Path: ");
+    var st4 = g4.add("statictext", undefined, "Slide along path: ");
     var slide = g4.add("slider", undefined, "");
     var txt_slide = g4.add("edittext", undefined, "0.00");
     txt_slide.characters = 5;
     
     var g5 = ui.add("group", undefined, "");
-    var invert_check = g5.add("checkbox", undefined, "Invert? ");
+    var invert_check = g5.add("checkbox", undefined, "Invert");
     invert_check.characters = 5;
     
     var g6 = ui.add("group", undefined, "");
@@ -539,13 +539,13 @@ if(app.documents.length > 0)
                 if(!isInteger(num_nodes) || !isPositive(num_nodes) || num_nodes == 0)
                 {
                     valid = false;
-                    error_msg += "Number of Notches: Please enter a positive integer.\n";
+                    error_msg += "Number of Leaves: Please enter a positive integer.\n";
                 }
                 node_length = args[1];
                 if((!isInteger(node_length) && !isFloat(node_length)) || !isPositive(node_length))
                 {
                     valid = false;
-                    error_msg += "Length of Nodes: Please enter a non-negative number.\n";
+                    error_msg += "Length of each leaf: Please enter a non-negative number.\n";
                 }
                 slide = args[2];
                 if((!isInteger(slide) && !isFloat(slide)) || !isPositive(slide))

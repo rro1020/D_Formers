@@ -378,7 +378,7 @@ function offset_entire_path(p, o, invert)
         var prev = ((j - 1) + p.length) % p.length;
         var next = (j + 1) % p.length;
         
-        var vec_p_c = [(p[j][1][0] - p[prev][2][0]), (p[j][1][1] - p[prev][2][1])];
+        /* var vec_p_c = [(p[j][1][0] - p[prev][2][0]), (p[j][1][1] - p[prev][2][1])];
         var norm1 = Math.sqrt(((vec_p_c[0] * vec_p_c[0]) + (vec_p_c[1] * vec_p_c[1])));
         var norm2 = Math.sqrt(((dx_l * dx_l) + (dy_l * dy_l)));
         var dot_prod = vec_p_c[0] * dx_l + vec_p_c[1] * dy_l;
@@ -400,7 +400,7 @@ function offset_entire_path(p, o, invert)
         
         var vec1 = [(new_right_ctrl[0] - new_pt[0]), (new_right_ctrl[1] - new_pt[1])];
         var norm1 = Math.sqrt(((vec1[0] * vec1[0]) + (vec1[1] * vec1[1])));
-        new_right_ctrl = computePointAlongLine([dx_r, dy_r], [new_pt], norm1);
+        new_right_ctrl = computePointAlongLine([dx_r, dy_r], [new_pt], norm1); */
         
         p[j][0] = new_pt;
         p[j][1] = [new_pt[0] + dx_l, new_pt[1] + dy_l];
@@ -530,19 +530,19 @@ if(app.documents.length > 0)
                 if(!isInteger(num_nodes) || !isPositive(num_nodes) || num_nodes == 0)
                 {
                     valid = false;
-                    error_msg += "Number of Notches: Please enter a positive integer.\n";
+                    error_msg += "Number of Holes: Please enter a positive integer.\n";
                 }
                 node_length = args[2];
                 if((!isInteger(node_length) && !isFloat(node_length)) || !isPositive(node_length))
                 {
                     valid = false;
-                    error_msg += "Length of Nodes: Please enter a non-negative number.\n";
+                    error_msg += "Length from path: Please enter a non-negative number.\n";
                 }
                 diameter = args[1];
                 if((!isInteger(diameter) && !isFloat(diameter)))
                 {
                     valid = false;
-                    error_msg += "Angle on Nodes: Please enter a non-negative number.\n";
+                    error_msg += "Diameter of Holes: Please enter a non-negative number.\n";
                 }
                 slide = args[3];
                 if((!isInteger(slide) && !isFloat(slide)) || !isPositive(slide))
