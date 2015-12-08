@@ -432,7 +432,7 @@ var skip = false;
 
 function setUpUI()
 {
-    var ui = new Window("dialog", "Add Leaves to Path");
+    var ui = new Window("dialog", "Add Notches to Path");
     
     skip = true;
     
