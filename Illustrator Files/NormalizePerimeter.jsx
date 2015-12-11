@@ -1,4 +1,4 @@
-
+// takes 2 paths, returns an int
 function comparePathsByLength(p1, p2)
 {
     if(p1.length < p2.length)
@@ -32,6 +32,7 @@ function setUpUI()
     ui.show();
 }
 
+// Checks that there is a document to work in before running
 if(app.documents.length > 0)
 {
     var allPaths = app.activeDocument.pathItems;

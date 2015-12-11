@@ -106,25 +106,7 @@ function bezieratlength(a, b, l)
     return t;
 }
 
-
-/* function segmentLength(a, b)
-{
-    var tmpPath = app.activeDocument.pathItems.add();
-    tmpPath.setEntirePath([a[0],b[0]]);
-    
-    tmpPath.pathPoints[0].pointType = a[3];
-    tmpPath.pathPoints[0].leftDirection = a[1];
-    tmpPath.pathPoints[0].rightDirection = a[2];
-    
-    tmpPath.pathPoints[1].pointType = b[3];
-    tmpPath.pathPoints[1].leftDirection = b[1];
-    tmpPath.pathPoints[1].rightDirection = b[2];
-    
-    var length = tmpPath.length;
-    tmpPath.remove();
-    return length;
-} */
-
+// takes a path, returns an array of floats
 function segmentLengths(path)
 {
     var lengths = [];
@@ -145,6 +127,7 @@ function parse_pnt(pnt)
     }
 }
 
+// takes a path, returns an array of points
 function parse_path(path)
 {
     pnts = [];
@@ -163,7 +146,6 @@ function unparse_path(path, p_pnts)
     {
         anchors.push(p_pnts[i][0]);
     }
-    //alert("anchors = " + anchors);
     path.setEntirePath(anchors);
     
     for(var j = 0; j < path.pathPoints.length; j++)
@@ -191,24 +173,24 @@ function split_curve(a, b, t)
     return [[start_pt,a[1],c12, a[3]], [c1234, c123, c234, PointType.SMOOTH], [end_pt,c34,b[2], b[3]]]
 }
 
+// takes a path and an int and a float, returns a path and array of points
 function generate_points(p, n, slide)
 {
+// Create n equidistant points around the path
     var seg_lengths = segmentLengths(p);
     
     var path_length = 0;
     for(var i in seg_lengths) {path_length += seg_lengths[i];}
     
     var target_dist = (path_length/n) * slide;
-    //alert(target_dist);
     var point_list = [];
     var test = 0.0;
-    //alert("p length = " + p.length);
     for(var i = 0; i < p.length + 1; i++)
     {
+    // Cycle through path and add a node where target_dist = 0
         i %= p.length;
         var next = (i + 1) % p.length;
         var curr_seg_len = segmentLength(p[i], p[next]);
-        //alert("current = " + curr_seg_len);
         if(target_dist == 0.0)
         {
             point_list.push(p[i]);
@@ -224,26 +206,16 @@ function generate_points(p, n, slide)
         
         else
         {
-            //alert("before split = " + p.length);
             var t =  bezieratlength(p[i], p[next], target_dist/curr_seg_len);
             
             tmp = split_curve(p[i], p[next], t);
-            //alert("original = " + seg_lengths[i]);    
             p[i][2] = tmp[0][2];
             p[next][1] = tmp[2][1];
             p.splice(i + 1,0, tmp[1]);
             
             point_list.push(tmp[1]);
-
-            //seg_lengths[i] = segmentLength(tmp[0], tmp[1]);
-            //seg_lengths.splice(i + 1, 0, segmentLength(tmp[1], tmp[2]));
-            
-            //alert("new = " + (segmentLength(tmp[0], tmp[1]) + segmentLength(tmp[1], tmp[2])));
-            
             target_dist = path_length / n;
-            //alert("after split = " + p.length);
-            //i += 1;
-        }
+       }
         test += curr_seg_len;
         
         if(point_list.length == n)
@@ -252,6 +224,7 @@ function generate_points(p, n, slide)
     return [p, point_list]
 }
 
+// takes 2 points, returns a slope
 function computeSlope(pt1, pt2)
 {
     var x1 = pt1[0][0];
@@ -278,6 +251,7 @@ function rotateSlope(pts, degrees)
     return [new_x, new_y];
 }
     
+// takes array of points, returns array of point pairs
 function findPointPairs(pts)
 {
     var pairs = [];
@@ -292,7 +266,8 @@ function findPointPairs(pts)
     
     return pairs;
 }
-    
+
+// takes a point and a slope and a int, returns a point
 function computePointAlongLine(slope, pt, distance)
 {
     var norm = Math.sqrt(((slope[0] * slope[0]) + (slope[1] * slope[1])));
@@ -305,27 +280,27 @@ function computePointAlongLine(slope, pt, distance)
     return [new_x, new_y];
 }
 
+// makes certain val1 and val2 are tolerable
 function check_relative_difference(val1, val2, tolerance)
 {
     return ((Math.min(val1, val2) / Math.max(val1, val2)) >= tolerance);
 }
     
+// takes a path, a int, 2 floats, and a bool, returns a path
 function add_leaves(p, n, o, slide, invert)
 {
+// Creates the Leaf Constructors
     tmp = generate_points(p, n * 2, slide);
     
     p = tmp[0];
     pts = tmp[1];
-    //alert("found pts = " + pts.length);
     pair_pts = findPointPairs(pts);
-    
-    //alert("pair lengths = " + pair_pts.length);
-    
+      
     var j = 0;
     
     for(var i = 0; i < pair_pts.length; i++)
     {
-
+    // Get center point and create leaf
         var a = pair_pts[i][0];
         var b = pair_pts[i][1];
         
@@ -337,8 +312,6 @@ function add_leaves(p, n, o, slide, invert)
         
         var tmp = o * Math.tan(0 * (Math.PI / 180));
         var dist = Math.sqrt(tmp * tmp + o * o);
-        
-        //alert("dist = " + dist);
         
         var polarity = 1;
         
@@ -369,7 +342,6 @@ function add_leaves(p, n, o, slide, invert)
         var m_d = computePointAlongLine(md_slope, b, dist/2);
         
         var start_pt = p[j];
-        //alert("j = " + j + " " + start_pt);
         while(start_pt[0] != a[0])
             {
                 j += 1;
@@ -390,7 +362,6 @@ function add_leaves(p, n, o, slide, invert)
             }
             
         var end_idx = j;
-        //alert("len = " + p.length);
         var e = end_idx - begin_idx - 1;
         
         var before;
@@ -414,14 +385,10 @@ function add_leaves(p, n, o, slide, invert)
         
         after[0][1] = m_d;
         
-        //alert("c = " + pt_c);
-        
         before.push.apply(before, [pt_m]);
         before.push.apply(before, after);
         
         p = before
-        
-        //alert("len1 = " + p.length);
     }
     
     return p;
@@ -490,7 +457,7 @@ function isInteger(x) { return Math.floor(x) === x; }
 function isFloat(x) { return !!(x % 1); }
 function isPositive(x) { return x >= 0.0; }
 
-
+// Checks that there is a document to work in before running
 if(app.documents.length > 0)
 {
     var allPaths = app.activeDocument.pathItems;

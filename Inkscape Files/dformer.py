@@ -95,22 +95,8 @@ def csplength(csp):
             total += l
     return lengths, total
 
-#Defined Functions 
-def verifyDocument(document):
-    document.set('width', '18in')
-    document.set('height', '32in')
-    
-    margin = inkex.etree.Element(inkex.addNS('rect', 'svg'))
-    margin.set('y', '14.940762')
-    margin.set('x', '-301.96371')
-    margin.set('width', '1022.4807')
-    margin.set('height', '1840.9845')
-    margin.set('stroke', 'red')
-    margin.set('stroke-width', '1')
-    margin.set('fill', 'none')
-    
-    document.append(margin)
-
+# D-Form Functions 
+# takes a slope and an int, returns a slope
 def rotateSlope((x, y), degrees):
     degrees = degrees % 360
     radians = math.radians(degrees)
@@ -130,25 +116,16 @@ def perpendicularSlope((dx, dy)):
 def computeLineIntercept((x, y), slope): 
     return y - slope * x 
 
-    
+# takes a point and a path, returns a int 
 def findPointInList((x, y), pointList): 
     for p in pointList: 
         if p[0] == x and p[1] == y:
             index = pointList.index(p)
     return index 
 
-def crossProductDirection((x1, y1), (x2, y2), (x3, y3)):
-    vector1 = (x1 - x2), (y1 - y2), 0
-    vector2 = (x3 - x2), (y3 - y2), 0 
-    direction = True
-    
-    product = vector1[1] * vector2[2] - vector1[2] * vector2[1], vector1[2] * vector2[0] - vector1[0] * vector2[2], vector1[0] * vector2[1] - vector1[1] * vector2[0]
-    if (product[0] > 0 or product[1] > 0 or product[2] > 0): 
-        direction = False 
-    return direction 
-    
+    # takes an int and a path, returns bool
 def getDirection(index, pointList):
-    #need to consider cases with a small amount of points 
+    # Need to consider cases with a small amount of points 
     if (index + 1 == len(pointList) - 1): 
         firstPoint = pointList[index]
         secondPoint = pointList[index + 1]
@@ -165,74 +142,31 @@ def getDirection(index, pointList):
         thirdPoint = pointList[index + 2]
     
     midPoint = getCenterPoint(pointList) 
-    inkex.errormsg("1stPoint = " + str(firstPoint) + "\t2ndPoint = " + str(secondPoint)) 
-    inkex.errormsg("3rdPoint = " + str(thirdPoint) + "\tmidPoint = " + str(midPoint)) 
     
     isInward = True 
     if (firstPoint[1] > midPoint[1]): 
-        #starting point is above midpoint
-        inkex.errormsg("firstPoint is above midPoint")
-        if (firstPoint[0] > secondPoint[0] and secondPoint[0] > thirdPoint[0]): 
-            inkex.errormsg("if")
+        # Starting point is above midpoint
+         if (firstPoint[0] > secondPoint[0] and secondPoint[0] > thirdPoint[0]): 
             isInward = True 
         elif (firstPoint[0] > secondPoint[0] and secondPoint[0] < thirdPoint[0]):
-            #redo with different points 
-            inkex.errormsg("elif")
+            # Redo with different points 
             isInward = getDirection(index + 3, pointList)
         else: 
-            inkex.errormsg("else")
             isInward = False 
     else: 
-        #starting point is at or below midpoint 
-        inkex.errormsg("firstPoint is below midPoint")
+        # Starting point is at or below midpoint 
         if (firstPoint[0] < secondPoint[0] and secondPoint[0] < thirdPoint[0]): 
-            inkex.errormsg("if")
             isInward = True 
         elif (firstPoint[0] < secondPoint[0] and secondPoint[0] > thirdPoint[0]): 
-            #redo with different points 
-            inkex.errormsg("elif")
+            # Redo with different points 
             isInward = getDirection(index + 3, pointList)
         else: 
-            inkex.errormsg("else")
             isInward = False 
     
     return isInward 
-            
-            
-def getDirectionOfPoint(p, pointList):
-    #index = findPointInList((x, y), pointList)
-    index = pointList.index(p)
-    pAfter = pointList[index]
-    pBefore = pointList[index]
-    
-    if (index == 0): 
-        #inkex.errormsg("index is 0")
-        pBefore = pointList[len(pointList) - 1]
-        pAfter = pointList[index + 1]
-    elif (index == len(pointList) - 1):
-        #inkex.errormsg("index is at the end")
-        pBefore = pointList[index - 1] 
-        pAfter = pointList[0] 
-    else: 
-        pBefore = pointList[index - 1]
-        pAfter = pointList[index + 1]
-    
-    inkex.errormsg("Index = " + str(index)) 
-    inkex.errormsg("PBefore = " + str(pBefore)) 
-    inkex.errormsg("P = " + str(p)) 
-    inkex.errormsg("PAfter = " + str(pAfter)) 
-    
-    direction = crossProductDirection(pBefore, p, pAfter)
-    
-    return direction 
-    
+           
+# takes 2 points and 2 slopes, returns a point
 def computeMidpointIntersection((x1, y1), (x2, y2), (dx1, dy1), (dx2, dy2)):
-    # slope1 = 0 
-    # slope2 = 0 
-    # if (dy1 != 0): 
-        # slope1 = dx1/dy1 
-    # if (dy2 != 0): 
-        # slope2 = dx2/dy2
     if (dx1 == 0): 
         b2 = computeLineIntercept((x2, y2), (dy2/dx2))
         x = x1 
@@ -250,22 +184,18 @@ def computeMidpointIntersection((x1, y1), (x2, y2), (dx1, dy1), (dx2, dy2)):
         x = (b1 - b2) / ((dy2/dx2) - (dy1/dx1)) 
         y = (dy1/dx1) * x + b1
     
-    #inkex.errormsg("slope1 = " + str((dy1/dx1)) + "\tslope2 = " + str((dy2/dx2)))
-    #inkex.errormsg("b1 = " + str(b1) + "\tb2 = " + str(b2))
-    
     return (x, y)
-    
+
+# takes a slope and a point and an int, returns a point
 def computePointAlongLine((dx, dy), (x, y), distance):
-    #compute unit vector
-    #inkex.errormsg("dx = " + str(dx) + "  dy = " + str(dy))
+    # Compute unit vector
     norm = (dx ** 2 + dy ** 2) ** 0.5
     
-    #if slope is undefined, new point is the x_coord + distance  
+    # If slope is undefined, new point is the x_coord + distance  
     new_x = 0 
     new_y = 0 
     if (norm == 0): 
-        #Subtraction only works for vertical slopes on the right side
-        #isInside = getDirection((dx, dy))
+        # Subtraction only works for vertical slopes on the right side
         new_x = x - distance 
         new_y = y
     else: 
@@ -277,56 +207,7 @@ def computePointAlongLine((dx, dy), (x, y), distance):
     
     return new_x, new_y
 
-def computePointAlongLine2((dx, dy), (x, y), distance, dirOfPoint):
-    #compute unit vector
-    #inkex.errormsg("dx = " + str(dx) + "  dy = " + str(dy))
-    norm = (dx ** 2 + dy ** 2) ** 0.5
-    
-    #if slope is undefined, new point is the x_coord + distance  
-    new_x = 0 
-    new_y = 0 
-    if (norm == 0): 
-        #Subtraction only works for vertical slopes on the right side
-        inkex.errormsg("Direction = " + str(dirOfPoint))
-        if (dirOfPoint):
-            new_x = x + distance 
-            new_y = y
-        else: 
-            new_x = x - distance 
-            new_y = y 
-    else: 
-        u_x = dx / norm
-        u_y = dy / norm
-    
-        new_x = x + distance * u_x
-        new_y = y + distance * u_y
-    
-    return new_x, new_y
-    
-def replaceSegmentWith(path, start, end, subpath):
-    new_path = ""
-    
-    split_path = path.replace("L", "C").split("C")
-    
-    curves = split_path[1:]
-    new_path += split_path[0] + curves[0]
-    i = 1
-    while i < len(curves):
-        points = curves[i - 1].split()
-        inkex.errormsg(str(start) + " " + str(end) + " " + curves[i] + '\n')
-        if start == (float(points[-2]), float(points[-1])):
-            points = curves[i].split()
-            while end != (points[-2], points[-1]):
-                i += 1
-                points = curves[i].split()
-            new_path += subpath
-        else:
-            new_path += "C" + curves[i]
-        
-        i += 1
-    
-    return new_path
-
+# takes array of points, returns array of point pairs
 def findPointPairs(points):
     pairs = []
     
@@ -336,17 +217,7 @@ def findPointPairs(points):
     
     return pairs
 
-def slidePointPairs(points): 
-    firstPoint = points[0] 
-    for i, j in enumerate(points):
-        if (i+1 > len(points) - 1): 
-            points[i] = firstPoint
-        else: 
-            points[i] = points[i+1]
-    return findPointPairs(points)
-
-
-#Based off the Bounding Box Method 
+#Based off the Bounding Box Method
 def getCenterPoint(points): 
     px_min = points[0] 
     px_max = points[1] 
@@ -375,62 +246,23 @@ def getMidPoint(p1, p2):
     y = (p1[1] + p2[1])/2
 
     return (x, y)
-    
+
+# makes certain val1 and val2 are tolerable
 def checkRelativeDifference(val1, val2, tolerance=0.9999):
     return (min(val1,val2)/max(val1,val2)) >= tolerance
 
-def rescalePath(path, n, oriCenterPoint, offset, diameter, document): 
-    #oriPointList = generatePoints(path, n)
-    #oriCenterPoint = getCenterPoint(oriPointList)
-    
-    #originalOrigin = originParse(path)
-    
-    perimeter = read_stored_info("pathlength", path)
-    path.set('transform', 'scale(' + str(1 + offset/100) + ' ' + str(1 + offset/100) +')')
-    fuseTransform(path) 
-    
-    newPath = cubicsuperpath.parsePath(path.get('d'))
-    #newOrigin = originParse(path)
-    
-    #mat = simpletransform.composeParents(node, [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]])
-    #node.set('d', cubicsuperpath.formatPath(parsedPath))
-    #simpletransform.applyTransformToPath(mat, parsedPath)
-    
-    slengths, stotal = csplength(newPath)
-    #newPoints = generatePoints(newPath, n)
-    
-    
-    #save the path length and segment lengths in the document 
-    path.set('pathlength', str(stotal))
-    tmp = ''
-    for slen in slengths[0][::-1]:
-        tmp += str(slen) + ' '
-    tmp = tmp[:-1] #remove the space at the end
-    path.set('segmentlengths', tmp)
-    
-    newPointList = generatePoints(path, n)
-    newCenterPoint = getCenterPoint(newPointList)
-    drawCircle(newCenterPoint, diameter/2, document)
-    
-    for p in newPointList: 
-        drawCircle(p, diameter/2, document)
-    
-    transformOrigin = [(oriCenterPoint[0] - newCenterPoint[0]), (oriCenterPoint[1] - newCenterPoint[1])]
-    inkex.errormsg("transformOrigin = " + str(transformOrigin))
-    path.set('transform', 'translate(' + str(transformOrigin[0]) + ' ' + str(transformOrigin[1]) +')')
-    fuseTransform(path)
-    
 def read_stored_info(type, obj):
     if type == 'pathlength':
         return float(obj.get(type))
     elif type == 'segmentlengths':
         tmp = obj.get(type).split(' ')
         tmp = map(float, tmp)
-        #raise Exeception(str(tmp))
         return tmp
     return None
 
+# takes a path and 2 ints, returns a path
 def generatePoints(obj, offset, n):
+# Create n equidistant points around the path
     pointList = []  
     targetDist = offset * read_stored_info("pathlength", obj)/ n 
     segmentLengths = [0.0] + read_stored_info("segmentlengths", obj)[::-1]
@@ -447,6 +279,7 @@ def generatePoints(obj, offset, n):
     total = 0
     
     while i < len(segments): 
+    # Cycle through path and add a node where targetDist = 0
         if segmentLengths[i] == targetDist:
             pointList += [segments[i][1]]
             targetDist = read_stored_info("pathlength", obj)/ n
@@ -473,18 +306,12 @@ def generatePoints(obj, offset, n):
                 raise Exception("There is an issue with the bezier split function. (" + str(len1 + len2) + " vs. " + str(segmentLengths[i]) + ")")
                 
             
-            #inkex.errormsg("Split Point = " + str(pointList[-1]))
-            #inkex.errormsg("len1 = " + str(len1) + "\nlen2 = " + str(len2) + " \nsegmentLengths[i] = " + str(segmentLengths[i]))
-            
             prev = segmentLengths[:i]
             next = segmentLengths[i+1:]
-            #inkex.errormsg("Pathlist = " + str(pathList))
+
             segmentLengths = prev + [len1, len2] + next
         
-            #obj.set('d', cubicsuperpath.formatPath([segments]))
-            #segments = cubicsuperpath.parsePath(obj.get('d'))[0]
-            targetDist = read_stored_info("pathlength", obj)/n
-            
+            targetDist = read_stored_info("pathlength", obj)/n           
             
             count += 1
         if(len(pointList) == n):
@@ -501,7 +328,7 @@ def generatePoints(obj, offset, n):
     return pointList 
 
 def drawColoredCircle(tarPoint, radius, doc, color):
-#draws a circle at a point
+# Draws a circle at a point
     circ = inkex.etree.Element(inkex.addNS('circle', 'svg'))
     circ.set('cx', str(tarPoint[0]))
     circ.set('cy', str(tarPoint[1]))
@@ -513,7 +340,7 @@ def drawColoredCircle(tarPoint, radius, doc, color):
     doc.append(circ)
     
 def drawCircle(tarPoint, radius, doc):
-#draws a circle at a point
+# Draws a circle at a point
     circ = inkex.etree.Element(inkex.addNS('circle', 'svg'))
     circ.set('cx', str(tarPoint[0]))
     circ.set('cy', str(tarPoint[1]))
@@ -525,15 +352,13 @@ def drawCircle(tarPoint, radius, doc):
     doc.append(circ)
 
 def printValue(value, self):
-#creates text object based on given value (debugging purposes)   
+# Creates text object based on given value (debugging purposes)   
     what = value
 
     # Get access to main SVG document element and get its dimensions.
     svg = self.document.getroot()
-    # or alternatively
-    # svg = self.document.xpath('//svg:svg',namespaces=inkex.NSS)[0]
 
-    # Again, there are two ways to get the attibutes:
+    # Get the attibutes:
     width  = self.unittouu(svg.get('width'))
     height = self.unittouu(svg.attrib['height'])
 
@@ -555,15 +380,16 @@ def printValue(value, self):
     # Connect elements together.
     layer.append(text)
     
+# takes a path, returns a point
 def originParse(pathTarget):
-# find the starting point of a path
+# Find the starting point of a path
     dString = pathTarget.get('d')
     
     dToken = 1
     xString = ""
     yString = ""
     symbols = "0123456789.-"
-    
+# Read through dString
     while dString[dToken] not in symbols:
         dToken += 1
     
@@ -642,9 +468,8 @@ class Length(inkex.Effect):
                         help="dummy")
 
     def effect(self):
-        # get number of digits
-        #prec = int(self.options.precision)
-        scale = self.unittouu('1px')    # convert to document units
+        # Get number of digits
+        scale = self.unittouu('1px')    # Convert to document units
         factor = 1.0
         doc = self.document.getroot()
         if doc.get('viewBox'):
@@ -654,7 +479,7 @@ class Length(inkex.Effect):
                 factor = self.unittouu(doc.get('height'))/float(viewh)
             factor /= self.unittouu('1px')
         
-        # loop over all selected paths
+        # Loop over all selected paths
         obj_lengths = []  
         obj_ids = []
         obj_nodes = []
@@ -668,15 +493,14 @@ class Length(inkex.Effect):
                 if self.options.type == "length":
                     slengths, stotal = csplength(p)
                     
-                    #save the path length and segment lengths in the document 
+                    # Save the path length and segment lengths in the document 
                     node.set('pathlength', str(stotal))
                     tmp = ''
                     for slen in slengths[0][::-1]:
                         tmp += str(slen) + ' '
-                    tmp = tmp[:-1] #remove the space at the end
+                    tmp = tmp[:-1] # Remove the space at the end
                     node.set('segmentlengths', tmp)
                     
-                    # self.group = inkex.etree.SubElement(node.getparent(),inkex.addNS('text','svg'))
                     obj_lengths += [stotal]
                     obj_ids += [id]
                     obj_nodes += [node] 
@@ -685,6 +509,7 @@ class Length(inkex.Effect):
         id_max = 1
         minOrigin = []
         maxOrigin = []
+        # Set bigger and smaller object
         if obj_lengths[id_min] > obj_lengths[id_max]:
             id_min = 1
             id_max = 0
@@ -692,24 +517,18 @@ class Length(inkex.Effect):
         minOrigin = originParse(obj_nodes[id_min])
         maxOrigin = originParse(obj_nodes[id_max])
         
+        #Scaling Radio Button Options
         if self.options.radioScale == "B2S":
             ratio = obj_lengths[id_min] / obj_lengths[id_max]
             obj_ori = []
             ori_trans = []      
-            #obj_nodes[id_max].set('transform', 'scale(' + str(ratio * 2) + ' ' + str(ratio * 2) +')')
             obj_nodes[id_max].set('transform', 'scale(' + str(ratio) + ' ' + str(ratio) +')')      
-            #obj_nodes[id_min].set('transform', 'scale(' + str(2) + ' ' + str(2) +')')      
             fuseTransform(obj_nodes[id_max])
-            #fuseTransform(obj_nodes[id_min])
-            
+
             obj_ori = originParse(obj_nodes[id_max])
             ori_trans = [(maxOrigin[0] - obj_ori[0]), (maxOrigin[1] - obj_ori[1])]
             obj_nodes[id_max].set('transform', 'translate(' + str(ori_trans[0]) + ' ' + str(ori_trans[1]) +')')
-            # obj_ori = originParse(obj_nodes[id_min])
-            # ori_trans = [(minOrigin[0] - obj_ori[0]), (minOrigin[1] - obj_ori[1])]
-            # obj_nodes[id_min].set('transform', 'translate(' + str(ori_trans[0]) + ' ' + str(ori_trans[1]) +')')
             fuseTransform(obj_nodes[id_max])
-            #fuseTransform(obj_nodes[id_min])
             
         elif self.options.radioScale == "S2B":
             ratio = obj_lengths[id_max] / obj_lengths[id_min]
@@ -723,7 +542,7 @@ class Length(inkex.Effect):
             obj_nodes[id_min].set('transform', 'translate(' + str(ori_trans[0]) + ' ' + str(ori_trans[1]) +')')
             fuseTransform(obj_nodes[id_min])
         
-        #verifyDocument(doc)
+        # Get paths and collect pathlength and segmentlengths
         obj_lengths = []  
         obj_ids = []
         obj_nodes = []
@@ -737,23 +556,21 @@ class Length(inkex.Effect):
                 if self.options.type == "length":
                     slengths, stotal = csplength(p)
                     
-                    #save the path length and segment lengths in the document 
+                    # Save the path length and segment lengths in the document 
                     node.set('pathlength', str(stotal))
                     tmp = ''
                     for slen in slengths[0][::-1]:
                         tmp += str(slen) + ' '
-                    tmp = tmp[:-1] #remove the space at the end
+                    tmp = tmp[:-1] #Remove the space at the end
                     node.set('segmentlengths', tmp)
                     
-                    # self.group = inkex.etree.SubElement(node.getparent(),inkex.addNS('text','svg'))
                     obj_lengths += [stotal]
                     obj_ids += [id]
                     obj_nodes += [node] 
                 # Format the length as string
-                # lenstr = locale.format("%(len)25."+str(prec)+"f",{'len':round(stotal*factor*self.options.scale,prec)}).strip()
         
         points = []
-        
+        # Run Functions based on active Tab
         if self.options.tab == "\"stitch\"":
             addStitching(obj_nodes[id_min], self.options.points, self.options.offset, self.options.paraStitch, doc)
             addStitching(obj_nodes[id_max], self.options.points, self.options.offset, self.options.paraStitch, doc)

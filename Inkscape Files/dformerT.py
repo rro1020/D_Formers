@@ -100,21 +100,20 @@ def csplength(csp):
             lengths[-1].append(l)
             total += l
     return lengths, total
-    
+
+# D-Form Functions   
+# takes a path, 2 ints, 2 floats, and a document
 def addNotches(path, n, offset, slideRatio, angle, document):  
+    # Creates the Notch Constructors
     points = dformer.generatePoints(path, slideRatio, 2 * n)
-    #if slideRatio > 0: 
-    #    points = dformer.generatePoints(path, 2 * n)
-    #else: 
-    #    points = dformer.generatePointsWithOffset(path, slideRatio, 2 * n)    
     
     pt_pairs = dformer.findPointPairs(points)
-    #inkex.errormsg("pt_pairs = " + str(len(pt_pairs)))
     
     p = cubicsuperpath.parsePath(path.get('d'))[0]
     i = 1
     
     for a, b in pt_pairs:
+        # Get center point of tooth
         slope = dformer.computeSlope(a, b)
         p_slope = dformer.perpendicularSlope(slope)
         
@@ -127,12 +126,14 @@ def addNotches(path, n, offset, slideRatio, angle, document):
         c = dformer.computePointAlongLine(ac_slope, a, -dist)
         d = dformer.computePointAlongLine(bd_slope, b, -dist)
         start_pt = p[i - 1][1]
-        
+        # Check that start_pt is viable 
         while not(dformer.checkRelativeDifference(start_pt[0], a[0]) and dformer.checkRelativeDifference(start_pt[1], a[1])):
             i += 1
             start_pt = p[i - 1][1]
         begin_idx = i
+        
         end_pt = p[i][1]
+        # Check that end_pt is viable
         while not(dformer.checkRelativeDifference(end_pt[0], b[0]) and dformer.checkRelativeDifference(end_pt[1], b[1])):
             i += 1
             end_pt = p[i][1]
@@ -140,7 +141,7 @@ def addNotches(path, n, offset, slideRatio, angle, document):
         
         before = p[:begin_idx]
         after = p[end_idx+1:]
-        
+        # Create Tooth
         before[-1][1] = list(a)
         before[-1][2] = list(a)
         line_to_c = [list(c)] * 3
@@ -195,9 +196,8 @@ class Length(inkex.Effect):
                         help="dummy")
 
     def effect(self):
-        # get number of digits
-        #prec = int(self.options.precision)
-        scale = self.unittouu('1px')    # convert to document units
+        # Get number of digits
+        scale = self.unittouu('1px')    # Convert to document units
         factor = 1.0
         doc = self.document.getroot()
         if doc.get('viewBox'):
@@ -206,7 +206,7 @@ class Length(inkex.Effect):
             if self.unittouu(doc.get('height'))/float(viewh) < factor:
                 factor = self.unittouu(doc.get('height'))/float(viewh)
             factor /= self.unittouu('1px')
-        # loop over all selected paths
+        # Loop over all selected paths
         obj_lengths = []  
         obj_ids = []
         obj_nodes = []
@@ -220,28 +220,27 @@ class Length(inkex.Effect):
                 if self.options.type == "length":
                     slengths, stotal = csplength(p)
                     
-                    #save the path length and segment lengths in the document 
+                    # Save the path length and segment lengths in the document 
                     node.set('pathlength', str(stotal))
                     tmp = ''
                     for slen in slengths[0][::-1]:
                         tmp += str(slen) + ' '
-                    tmp = tmp[:-1] #remove the space at the end
+                    tmp = tmp[:-1] # Remove the space at the end
                     node.set('segmentlengths', tmp)
                     
-                    # self.group = inkex.etree.SubElement(node.getparent(),inkex.addNS('text','svg'))
                     obj_lengths += [stotal]
                     obj_ids += [id]
                     obj_nodes += [node] 
                 # Format the length as string
-                # lenstr = locale.format("%(len)25."+str(prec)+"f",{'len':round(stotal*factor*self.options.scale,prec)}).strip()
-        
+               
         id_min = 0
         id_max = 1
+        # Set bigger and smaller object
         if obj_lengths[id_min] > obj_lengths[id_max]:
             id_min = 1
             id_max = 0
-            
-        #verifyDocument(doc)
+        
+        # Get paths and collect pathlength and segmentlengths
         obj_lengths = []  
         obj_ids = []
         obj_nodes = []
@@ -255,7 +254,7 @@ class Length(inkex.Effect):
                 if self.options.type == "length":
                     slengths, stotal = csplength(p)
                     
-                    #save the path length and segment lengths in the document 
+                    # Save the path length and segment lengths in the document 
                     node.set('pathlength', str(stotal))
                     tmp = ''
                     for slen in slengths[0][::-1]:
@@ -263,15 +262,14 @@ class Length(inkex.Effect):
                     tmp = tmp[:-1] #remove the space at the end
                     node.set('segmentlengths', tmp)
                     
-                    # self.group = inkex.etree.SubElement(node.getparent(),inkex.addNS('text','svg'))
                     obj_lengths += [stotal]
                     obj_ids += [id]
                     obj_nodes += [node] 
                 # Format the length as string
-                # lenstr = locale.format("%(len)25."+str(prec)+"f",{'len':round(stotal*factor*self.options.scale,prec)}).strip()
-        
+               
         points = []
         
+        # Applies the teeth methods to both paths 
         addNotches(obj_nodes[id_min], self.options.pointsT, self.options.offsetT, self.options.slideT, self.options.paraTooth, doc)
         addNotches(obj_nodes[id_max], self.options.pointsT, self.options.offsetT, self.options.slideT, self.options.paraTooth, doc)
 

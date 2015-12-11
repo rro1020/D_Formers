@@ -106,6 +106,7 @@ function bezieratlength(a, b, l)
     return t;
 }
 
+// takes a path, returns an array of floats
 function segmentLengths(path)
 {
     var lengths = [];
@@ -125,6 +126,7 @@ function parse_pnt(pnt)
     }
 }
 
+// takes a path, returns an array of points
 function parse_path(path)
 {
     pnts = [];
@@ -206,8 +208,10 @@ function split_curve(a, b, t)
     return [[start_pt,a[1],c12, a[3]], [c1234, c123, c234, PointType.SMOOTH], [end_pt,c34,b[2], b[3]]]
 }
 
+// takes a path and an int and a float, returns a path and array of points
 function generate_points(p, n, slide)
 {
+// Create n equidistant points around the path
     var seg_lengths = segmentLengths(p);
     
     var path_length = 0;
@@ -219,6 +223,7 @@ function generate_points(p, n, slide)
     //alert("p length = " + p.length);
     for(var i = 0; i < p.length + 1; i++)
     {
+    // Cycle through path and add a node where target_dist = 0
         i %= p.length;
         var next = (i + 1) % p.length;
         var curr_seg_len = segmentLength(p[i], p[next]);
@@ -266,6 +271,7 @@ function generate_points(p, n, slide)
     return [p, point_list]
 }
 
+// takes 2 points, returns a slope
 function computeSlope(pt1, pt2)
 {
     var x1 = pt1[0][0];
@@ -292,6 +298,7 @@ function rotateSlope(pts, degrees)
     return [new_x, new_y];
 }
 
+// takes array of points, returns array of point pairs
 function findPointPairs(pts)
 {
     var pairs = [];
@@ -306,7 +313,8 @@ function findPointPairs(pts)
     
     return pairs;
 }
-    
+
+// takes a point and a slope and a int, returns a point    
 function computePointAlongLine(slope, pt, distance)
 {
     var norm = Math.sqrt(((slope[0] * slope[0]) + (slope[1] * slope[1])));
@@ -319,26 +327,19 @@ function computePointAlongLine(slope, pt, distance)
     return [new_x, new_y];
 }
 
+// makes certain val1 and val2 are tolerable
 function check_relative_difference(val1, val2, tolerance)
 {
     return ((Math.min(val1, val2) / Math.max(val1, val2)) >= tolerance);
 }
 
-function derivative_bcurve(start, ctrl1, ctrl2, end, t)
-{
-    var d_x = ctr1[0] + 2 * ctrl2[0] * t + 3 * end[0] * t * t;
-    var d_y = ctr1[1] + 2 * ctrl2[1] * t + 3 * end[1] * t * t;
-    
-    return [d_x, d_y];
-}
-
+// takes a path, a int, 3 floats, and a bool
 function add_stiches(p, n, o, diameter, slide, invert)
 {
+// Creates the Stitch Constructors
     tmp = generate_points(p, n, slide);
     
-    //p = tmp[0];
     pts = tmp[1];
-    //alert("found pts = " + pts.length);
     
     for(var i = 0; i < pts.length; i++)
     {
@@ -349,6 +350,7 @@ function add_stiches(p, n, o, diameter, slide, invert)
     }
 }
 
+// takes a path and a float and a bool, returns a path
 function offset_entire_path(p, o, invert)
 {
     if(!invert)
@@ -377,30 +379,6 @@ function offset_entire_path(p, o, invert)
         
         var prev = ((j - 1) + p.length) % p.length;
         var next = (j + 1) % p.length;
-        
-        /* var vec_p_c = [(p[j][1][0] - p[prev][2][0]), (p[j][1][1] - p[prev][2][1])];
-        var norm1 = Math.sqrt(((vec_p_c[0] * vec_p_c[0]) + (vec_p_c[1] * vec_p_c[1])));
-        var norm2 = Math.sqrt(((dx_l * dx_l) + (dy_l * dy_l)));
-        var dot_prod = vec_p_c[0] * dx_l + vec_p_c[1] * dy_l;
-        var angle = Math.acos(dot_prod / (norm1 * norm2)) * 0.5;
-        var left_ctrl_slope = rotateSlope(vec_p_c, 360 - (angle * (180 / Math.PI)));
-        var new_left_ctrl = computePointAlongLine(left_ctrl_slope, [p[j][1]],o);
-        
-        var vec1 = [(new_left_ctrl[0] - new_pt[0]), (new_left_ctrl[1] - new_pt[1])];
-        var norm1 = Math.sqrt(((vec1[0] * vec1[0]) + (vec1[1] * vec1[1])));
-        new_left_ctrl = computePointAlongLine([dx_l, dy_l], [new_pt], norm1);
-        
-        var vec_n_c = [(p[j][2][0] - p[next][1][0]), (p[j][2][1] - p[next][1][1])];
-        var norm1 = Math.sqrt(((vec_n_c[0] * vec_n_c[0]) + (vec_n_c[1] * vec_n_c[1])));
-        var norm2 = Math.sqrt(((dx_r * dx_r) + (dy_r * dy_r)));
-        var dot_prod = vec_n_c[0] * dx_r + vec_n_c[1] * dy_r;
-        var angle = Math.acos(dot_prod / (norm1 * norm2));
-        var right_ctrl_slope = rotateSlope(vec_n_c, (angle * (180 / Math.PI)));
-        var new_right_ctrl = computePointAlongLine(right_ctrl_slope, [p[j][2]],o);
-        
-        var vec1 = [(new_right_ctrl[0] - new_pt[0]), (new_right_ctrl[1] - new_pt[1])];
-        var norm1 = Math.sqrt(((vec1[0] * vec1[0]) + (vec1[1] * vec1[1])));
-        new_right_ctrl = computePointAlongLine([dx_r, dy_r], [new_pt], norm1); */
         
         p[j][0] = new_pt;
         p[j][1] = [new_pt[0] + dx_l, new_pt[1] + dy_l];
@@ -482,6 +460,7 @@ function isInteger(x) { return Math.floor(x) === x; }
 function isFloat(x) { return !!(x % 1); }
 function isPositive(x) { return x >= 0.0; }
 
+// Checks that there is a document to work in before running
 if(app.documents.length > 0)
 {
     var allPaths = app.activeDocument.pathItems;

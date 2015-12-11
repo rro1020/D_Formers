@@ -101,6 +101,7 @@ def csplength(csp):
             total += l
     return lengths, total
 
+# D-Form Functions 
 class Length(inkex.Effect):
     def __init__(self):
         inkex.Effect.__init__(self)
@@ -130,9 +131,8 @@ class Length(inkex.Effect):
                         help="dummy")
 
     def effect(self):
-        # get number of digits
-        #prec = int(self.options.precision)
-        scale = self.unittouu('1px')    # convert to document units
+        # Get number of digits
+        scale = self.unittouu('1px')    # Convert to document units
         factor = 1.0
         doc = self.document.getroot()
         if doc.get('viewBox'):
@@ -141,7 +141,7 @@ class Length(inkex.Effect):
             if self.unittouu(doc.get('height'))/float(viewh) < factor:
                 factor = self.unittouu(doc.get('height'))/float(viewh)
             factor /= self.unittouu('1px')
-        # loop over all selected paths
+        # Loop over all selected paths
         obj_lengths = []  
         obj_ids = []
         obj_nodes = []
@@ -155,25 +155,24 @@ class Length(inkex.Effect):
                 if self.options.type == "length":
                     slengths, stotal = csplength(p)
                     
-                    #save the path length and segment lengths in the document 
+                    # Save the path length and segment lengths in the document 
                     node.set('pathlength', str(stotal))
                     tmp = ''
                     for slen in slengths[0][::-1]:
                         tmp += str(slen) + ' '
-                    tmp = tmp[:-1] #remove the space at the end
+                    tmp = tmp[:-1] # Remove the space at the end
                     node.set('segmentlengths', tmp)
                     
-                    # self.group = inkex.etree.SubElement(node.getparent(),inkex.addNS('text','svg'))
                     obj_lengths += [stotal]
                     obj_ids += [id]
                     obj_nodes += [node] 
                 # Format the length as string
-                # lenstr = locale.format("%(len)25."+str(prec)+"f",{'len':round(stotal*factor*self.options.scale,prec)}).strip()
         
         id_min = 0
         id_max = 1
         minOrigin = []
         maxOrigin = []
+        # Set bigger and smaller object
         if obj_lengths[id_min] > obj_lengths[id_max]:
             id_min = 1
             id_max = 0
@@ -181,6 +180,7 @@ class Length(inkex.Effect):
         minOrigin = dformer.originParse(obj_nodes[id_min])
         maxOrigin = dformer.originParse(obj_nodes[id_max])
         
+        #Scaling Radio Button Options
         if self.options.radioScale == "B2S":
             ratio = obj_lengths[id_min] / obj_lengths[id_max]
             obj_ori = []
@@ -201,7 +201,6 @@ class Length(inkex.Effect):
             fuseTransform(obj_nodes[id_min])
             
             obj_ori = dformer.originParse(obj_nodes[id_min])
-            #drawCircle(obj_ori, self.options.paraStitch, doc)
             ori_trans = [(minOrigin[0] - obj_ori[0]), (minOrigin[1] - obj_ori[1])]
             obj_nodes[id_min].set('transform', 'translate(' + str(ori_trans[0]) + ' ' + str(ori_trans[1]) +')')
             fuseTransform(obj_nodes[id_min])
